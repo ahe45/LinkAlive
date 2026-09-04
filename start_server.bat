@@ -6,6 +6,7 @@ cd /d "%~dp0"
 
 set "REQUIRED_NODE_MAJOR=22"
 set "REQUIRED_PNPM_VERSION=11.19.0"
+set "REDIS_WINGET_ID=taizod1024.redis-windows-fork"
 
 call :check_application_ports
 if "!APP_PORT_STATUS!"=="2" (
@@ -59,7 +60,7 @@ set "APP_PORT_STATUS=!errorlevel!"
 exit /b 0
 
 :refresh_path
-set "PATH=%ProgramFiles%\nodejs;%APPDATA%\npm;%LOCALAPPDATA%\Microsoft\WinGet\Links;%ProgramFiles%\Docker\Docker\resources\bin;%PATH%"
+set "PATH=%ProgramFiles%\nodejs;%APPDATA%\npm;%LOCALAPPDATA%\Microsoft\WinGet\Links;%PATH%"
 exit /b 0
 
 :require_winget
@@ -168,78 +169,72 @@ powershell -NoProfile -Command "$client = New-Object Net.Sockets.TcpClient; try 
 exit /b !errorlevel!
 
 :ensure_infrastructure
-set "INFRA_SERVICES="
-call :port_open 3306
-if errorlevel 1 set "INFRA_SERVICES=!INFRA_SERVICES! mysql"
-call :port_open 6379
-if errorlevel 1 set "INFRA_SERVICES=!INFRA_SERVICES! redis"
+call :ensure_redis
+if errorlevel 1 exit /b 1
 
-if not defined INFRA_SERVICES (
+call :port_open 3306
+if not errorlevel 1 (
   echo MySQL/MariaDB and Redis are already reachable.
   exit /b 0
 )
 
-echo Missing local services:!INFRA_SERVICES!
-call :ensure_docker
-if errorlevel 1 exit /b 1
+echo [ERROR] MySQL/MariaDB is not reachable on port 3306.
+echo Start MySQL/MariaDB and check DATABASE_URL in .env, then run this file again.
+exit /b 1
 
-docker compose -f infra/compose.yaml up -d --wait --wait-timeout 120 !INFRA_SERVICES!
+:ensure_redis
+call :port_open 6379
+if not errorlevel 1 (
+  echo Redis is already reachable.
+  exit /b 0
+)
+
+call :find_redis_server
 if errorlevel 1 (
-  echo [ERROR] Could not start the local infrastructure containers.
+  echo Redis was not found. Installing the Windows Redis runtime...
+  call :require_winget
+  if errorlevel 1 exit /b 1
+  winget install --exact --id %REDIS_WINGET_ID% --silent --disable-interactivity --accept-package-agreements --accept-source-agreements
+  if errorlevel 1 (
+    echo [ERROR] Redis installation failed.
+    exit /b 1
+  )
+  call :find_redis_server
+  if errorlevel 1 (
+    echo [ERROR] Redis was installed but redis-server.exe could not be found.
+    exit /b 1
+  )
+)
+
+set "REDIS_DATA_DIR=%LOCALAPPDATA%\LinkAlive\redis"
+if not exist "!REDIS_DATA_DIR!" mkdir "!REDIS_DATA_DIR!"
+if not exist "!REDIS_DATA_DIR!" (
+  echo [ERROR] Could not create the local Redis data folder.
   exit /b 1
 )
 
-call :wait_for_port 3306 90
+echo Starting local Redis...
+powershell -NoProfile -Command "Start-Process -FilePath '!REDIS_SERVER!' -ArgumentList @('--bind','127.0.0.1','--port','6379','--protected-mode','yes','--appendonly','yes','--dir','!REDIS_DATA_DIR!') -WindowStyle Hidden"
 if errorlevel 1 (
-  echo [ERROR] MySQL/MariaDB did not become ready on port 3306.
+  echo [ERROR] Redis could not be started.
   exit /b 1
 )
-call :wait_for_port 6379 60
+
+call :wait_for_port 6379 30
 if errorlevel 1 (
   echo [ERROR] Redis did not become ready on port 6379.
   exit /b 1
 )
-echo MySQL/MariaDB and Redis are ready.
+echo Redis is ready.
 exit /b 0
 
-:ensure_docker
-call :refresh_path
-where docker.exe >nul 2>&1
-if errorlevel 1 (
-  echo Docker Desktop was not found. Installing it...
-  call :require_winget
-  if errorlevel 1 exit /b 1
-  winget install --exact --id Docker.DockerDesktop --silent --disable-interactivity --accept-package-agreements --accept-source-agreements
-  if errorlevel 1 (
-    echo [ERROR] Docker Desktop installation failed.
-    exit /b 1
-  )
-  call :refresh_path
-)
+:find_redis_server
+set "REDIS_SERVER="
+for /f "delims=" %%R in ('where redis-server.exe 2^>nul') do if not defined REDIS_SERVER set "REDIS_SERVER=%%R"
+if defined REDIS_SERVER exit /b 0
 
-where docker.exe >nul 2>&1
-if errorlevel 1 (
-  echo [ERROR] Docker Desktop was installed but is not available yet. Restart Windows and try again.
-  exit /b 1
-)
-
-docker info >nul 2>&1
-if not errorlevel 1 exit /b 0
-
-if exist "%ProgramFiles%\Docker\Docker\Docker Desktop.exe" (
-  echo Starting Docker Desktop...
-  powershell -NoProfile -Command "Start-Process -FilePath '%ProgramFiles%\Docker\Docker\Docker Desktop.exe' -WindowStyle Hidden"
-)
-
-echo Waiting for Docker Desktop to become ready...
-for /l %%I in (1,1,90) do (
-  docker info >nul 2>&1
-  if not errorlevel 1 exit /b 0
-  timeout /t 2 /nobreak >nul
-)
-
-echo [ERROR] Docker Desktop did not become ready.
-echo Complete Docker Desktop first-run setup or restart Windows, then run this file again.
+for /f "delims=" %%R in ('powershell -NoProfile -Command "$root = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'; if (Test-Path -LiteralPath $root) { foreach ($directory in (Get-ChildItem -LiteralPath $root -Directory -ErrorAction SilentlyContinue)) { if ($directory.Name -like 'taizod1024.redis-windows-fork*') { $candidates = @(Get-ChildItem -LiteralPath $directory.FullName -Filter 'redis-server.exe' -File -Recurse -ErrorAction SilentlyContinue); if ($candidates.Count -gt 0) { $candidates[0].FullName; break } } } }"') do set "REDIS_SERVER=%%R"
+if defined REDIS_SERVER exit /b 0
 exit /b 1
 
 :wait_for_port
