@@ -57,6 +57,6 @@ FROM base AS web
 ENV NODE_ENV=production
 COPY --chown=node:node --from=build /app /app
 USER node
-EXPOSE 3000
+EXPOSE 3001
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["pnpm", "--filter", "@linkalive/web", "start"]

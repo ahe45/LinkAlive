@@ -9,7 +9,7 @@ const validEnvironment = {
   ADMIN_PASSWORD: 'a-safe-development-password',
   AUTH_SECRET: 'a-safe-session-secret-with-more-than-32-characters',
   ENCRYPTION_KEY: Buffer.from('0123456789abcdef0123456789abcdef').toString('base64'),
-  WEB_ORIGIN: 'http://localhost:3000',
+  WEB_ORIGIN: 'http://localhost:3001',
   COOKIE_SECURE: 'false',
 };
 
@@ -47,7 +47,7 @@ describe('API configuration safety', () => {
 
   it('allows an insecure cookie only for loopback production smoke tests', () => {
     process.env.NODE_ENV = 'production';
-    process.env.WEB_ORIGIN = 'http://[::1]:3000';
+    process.env.WEB_ORIGIN = 'http://[::1]:3001';
     expect(getConfig().cookieSecure).toBe(false);
   });
 

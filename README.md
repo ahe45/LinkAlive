@@ -85,11 +85,20 @@ pnpm db:deploy
 
 ### 3. 애플리케이션 실행
 
+Windows에서는 루트의 `start_server.bat`를 더블클릭하거나 다음과 같이 실행하면 의존성 확인,
+DB migration 적용 후 전체 서버가 시작됩니다.
+
+```powershell
+.\start_server.bat
+```
+
+직접 실행하려면 다음 명령을 사용합니다.
+
 ```powershell
 pnpm dev
 ```
 
-- 관리자 화면: <http://localhost:3000>
+- 관리자 화면: <http://localhost:3001>
 - API readiness: <http://localhost:4000/health/ready>
 - Scheduler health: <http://localhost:4101/health>
 - Worker health: <http://localhost:4102/health>

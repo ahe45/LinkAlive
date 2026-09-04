@@ -14,7 +14,7 @@ const booleanFromString = z
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
-  WEB_ORIGIN: z.string().url().max(2_048).default('http://localhost:3000'),
+  WEB_ORIGIN: z.string().url().max(2_048).default('http://localhost:3001'),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
   ADMIN_USERNAME: z.string().min(1).max(160).default('admin'),

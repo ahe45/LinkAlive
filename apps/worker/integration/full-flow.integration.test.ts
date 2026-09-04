@@ -194,7 +194,7 @@ describe.runIf(integrationEnabled)('MariaDB/MySQL + Redis scheduled outage flow'
         region: 'integration',
         leaseMs: 60_000,
         encryptionKey,
-        appBaseUrl: 'http://localhost:3000',
+        appBaseUrl: 'http://localhost:3001',
         messageIdDomain: 'integration.test',
       },
       prisma,
