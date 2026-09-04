@@ -10,6 +10,7 @@ const validEnvironment = {
   AUTH_SECRET: 'a-safe-session-secret-with-more-than-32-characters',
   ENCRYPTION_KEY: Buffer.from('0123456789abcdef0123456789abcdef').toString('base64'),
   WEB_ORIGIN: 'http://localhost:3001',
+  WEB_ALLOWED_ORIGINS: '',
   COOKIE_SECURE: 'false',
 };
 
@@ -51,11 +52,28 @@ describe('API configuration safety', () => {
     expect(getConfig().cookieSecure).toBe(false);
   });
 
+  it('accepts additional web origins', () => {
+    process.env.WEB_ALLOWED_ORIGINS = 'https://monitor.example.com, https://admin.example.com';
+    expect(getConfig().webOrigins).toEqual([
+      'http://localhost:3001',
+      'https://monitor.example.com',
+      'https://admin.example.com',
+    ]);
+  });
+
   it.each(['https://example.com/path', 'https://user:password@example.com', 'file:///tmp/ui'])(
     'rejects a value that is not a bare web origin: %s',
     (origin) => {
       process.env.WEB_ORIGIN = origin;
       expect(() => getConfig()).toThrow(/WEB_ORIGIN/);
+    },
+  );
+
+  it.each(['https://example.com/path', 'https://user:password@example.com', 'file:///tmp/ui'])(
+    'rejects an invalid additional web origin: %s',
+    (origin) => {
+      process.env.WEB_ALLOWED_ORIGINS = origin;
+      expect(() => getConfig()).toThrow(/WEB_ALLOWED_ORIGINS/);
     },
   );
 

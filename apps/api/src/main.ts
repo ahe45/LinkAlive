@@ -23,7 +23,7 @@ async function bootstrap(): Promise<void> {
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
   app.enableCors({
-    origin: config.webOrigin,
+    origin: config.webOrigins,
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   });

@@ -32,7 +32,7 @@ export class AuthGuard implements CanActivate {
 
     if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
       const origin = request.headers.origin;
-      if (origin && origin.replace(/\/$/, '') !== config.webOrigin) {
+      if (origin && !config.webOrigins.includes(origin.replace(/\/$/, ''))) {
         throw new ForbiddenException('허용되지 않은 요청 출처입니다.');
       }
     }

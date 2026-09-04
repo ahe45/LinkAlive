@@ -21,7 +21,9 @@ export class AuthController {
   ): { user: { username: string } } {
     const config = getConfig();
     const origin = request.headers.origin;
-    if (origin && origin.replace(/\/$/, '') !== config.webOrigin) throw new UnauthorizedException();
+    if (origin && !config.webOrigins.includes(origin.replace(/\/$/, ''))) {
+      throw new UnauthorizedException();
+    }
 
     const body = loginSchema.safeParse(rawBody);
     if (

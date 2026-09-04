@@ -15,6 +15,7 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
   WEB_ORIGIN: z.string().url().max(2_048).default('http://localhost:3001'),
+  WEB_ALLOWED_ORIGINS: z.string().max(8_192).default(''),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
   ADMIN_USERNAME: z.string().min(1).max(160).default('admin'),
@@ -42,7 +43,7 @@ const schema = z.object({
 export type ApiConfig = {
   nodeEnv: 'development' | 'test' | 'production';
   port: number;
-  webOrigin: string;
+  webOrigins: string[];
   databaseUrl: string;
   redisUrl: string;
   adminUsername: string;
@@ -74,30 +75,23 @@ export function getConfig(): ApiConfig {
   if (parsed.AUTH_SECRET === 'replace-with-at-least-32-random-characters') {
     throw new Error('AUTH_SECRET must be changed from the example value');
   }
-  const webOrigin = new URL(parsed.WEB_ORIGIN);
-  if (
-    webOrigin.username ||
-    webOrigin.password ||
-    webOrigin.pathname !== '/' ||
-    webOrigin.search ||
-    webOrigin.hash
-  ) {
-    throw new Error('WEB_ORIGIN must contain only an http:// or https:// origin');
-  }
-  if (webOrigin.protocol !== 'http:' && webOrigin.protocol !== 'https:') {
-    throw new Error('WEB_ORIGIN must contain only an http:// or https:// origin');
-  }
+  const rawWebOrigins = [
+    parsed.WEB_ORIGIN,
+    ...parsed.WEB_ALLOWED_ORIGINS.split(',').map((origin) => origin.trim()),
+  ].filter(Boolean);
+  const webOrigins = [...new Set(rawWebOrigins.map((origin) => normalizeWebOrigin(origin)))];
   const redisProtocol = new URL(parsed.REDIS_URL).protocol;
   if (redisProtocol !== 'redis:' && redisProtocol !== 'rediss:') {
     throw new Error('REDIS_URL must use redis:// or rediss://');
   }
-  const loopbackOrigin = ['localhost', '127.0.0.1', '[::1]'].includes(webOrigin.hostname);
-  if (
-    parsed.NODE_ENV === 'production' &&
-    !loopbackOrigin &&
-    (webOrigin.protocol !== 'https:' || !parsed.COOKIE_SECURE)
-  ) {
-    throw new Error('Production WEB_ORIGIN must use HTTPS and COOKIE_SECURE=true');
+  if (parsed.NODE_ENV === 'production') {
+    for (const origin of webOrigins) {
+      const webOrigin = new URL(origin);
+      const loopbackOrigin = ['localhost', '127.0.0.1', '[::1]'].includes(webOrigin.hostname);
+      if (!loopbackOrigin && (webOrigin.protocol !== 'https:' || !parsed.COOKIE_SECURE)) {
+        throw new Error('Production web origins must use HTTPS and COOKIE_SECURE=true');
+      }
+    }
   }
   const encryptionKey = Buffer.from(parsed.ENCRYPTION_KEY, 'base64');
   if (encryptionKey.byteLength !== 32) {
@@ -107,7 +101,7 @@ export function getConfig(): ApiConfig {
   cached = {
     nodeEnv: parsed.NODE_ENV,
     port: parsed.API_PORT,
-    webOrigin: parsed.WEB_ORIGIN.replace(/\/$/, ''),
+    webOrigins,
     databaseUrl: parsed.DATABASE_URL,
     redisUrl: parsed.REDIS_URL,
     adminUsername: parsed.ADMIN_USERNAME,
@@ -127,6 +121,30 @@ export function getConfig(): ApiConfig {
     trustProxy: parsed.TRUST_PROXY,
   };
   return cached;
+}
+
+function normalizeWebOrigin(value: string): string {
+  let origin: URL;
+  try {
+    origin = new URL(value);
+  } catch {
+    throw new Error('WEB_ORIGIN and WEB_ALLOWED_ORIGINS must contain valid web origins');
+  }
+
+  if (
+    (origin.protocol !== 'http:' && origin.protocol !== 'https:') ||
+    origin.username ||
+    origin.password ||
+    origin.pathname !== '/' ||
+    origin.search ||
+    origin.hash
+  ) {
+    throw new Error(
+      'WEB_ORIGIN and WEB_ALLOWED_ORIGINS must contain only http:// or https:// origins',
+    );
+  }
+
+  return origin.origin;
 }
 
 export function resetConfigForTests(): void {
