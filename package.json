@@ -1,0 +1,47 @@
+{
+  "name": "linkalive",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted URL availability monitoring with Telegram alerts",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "predev": "pnpm db:generate && pnpm build:packages",
+    "dev": "dotenv -e .env -- concurrently --kill-others-on-fail -n api,scheduler,worker,web -c blue,magenta,yellow,green \"pnpm dev:api\" \"pnpm dev:scheduler\" \"pnpm dev:worker\" \"pnpm dev:web\"",
+    "dev:api": "pnpm --filter @linkalive/api dev",
+    "dev:scheduler": "pnpm --filter @linkalive/scheduler dev",
+    "dev:worker": "pnpm --filter @linkalive/worker dev",
+    "dev:web": "pnpm --filter @linkalive/web dev",
+    "build:packages": "pnpm --filter \"./packages/**\" -r --if-present run build",
+    "prebuild": "pnpm db:generate",
+    "build": "pnpm -r --if-present run build",
+    "pretest": "pnpm db:generate && pnpm build:packages",
+    "test": "pnpm -r --if-present run test",
+    "pretypecheck": "pnpm db:generate && pnpm build:packages",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "lint": "pnpm format:check && pnpm typecheck",
+    "audit": "pnpm audit --audit-level high",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "pnpm --filter @linkalive/database prisma:generate",
+    "db:bootstrap:local": "node scripts/bootstrap-local-database.mjs",
+    "db:migrate": "dotenv -e .env -- pnpm --filter @linkalive/database prisma:migrate",
+    "db:deploy": "dotenv -e .env -- pnpm --filter @linkalive/database prisma:deploy",
+    "db:retention": "dotenv -e .env -- pnpm --silent --filter @linkalive/database retention",
+    "db:studio": "dotenv -e .env -- pnpm --filter @linkalive/database prisma:studio",
+    "infra:up": "docker compose -f infra/compose.yaml up -d mysql redis",
+    "infra:down": "docker compose -f infra/compose.yaml down",
+    "infra:logs": "docker compose -f infra/compose.yaml logs -f"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "concurrently": "^9.2.1",
+    "dotenv-cli": "^11.0.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

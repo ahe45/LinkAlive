@@ -1,0 +1,160 @@
+services:
+  migrate:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: api
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+    command: ['pnpm', '--filter', '@linkalive/database', 'prisma:deploy']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:-mysql://linkalive:linkalive@mysql:3306/linkalive}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: api
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      API_PORT: '4000'
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:-mysql://linkalive:linkalive@mysql:3306/linkalive}
+      REDIS_URL: ${CONTAINER_REDIS_URL:-redis://redis:6379}
+    ports:
+      - '127.0.0.1:4000:4000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  scheduler:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: scheduler
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      SCHEDULER_HEALTH_PORT: '4101'
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:-mysql://linkalive:linkalive@mysql:3306/linkalive}
+      REDIS_URL: ${CONTAINER_REDIS_URL:-redis://redis:6379}
+      CHECK_QUEUE_NAME: ${CHECK_QUEUE_NAME:-linkalive-checks}
+      SCHEDULER_POLL_INTERVAL_MS: ${SCHEDULER_POLL_INTERVAL_MS:-1000}
+      SCHEDULER_DUE_BATCH_SIZE: ${SCHEDULER_DUE_BATCH_SIZE:-100}
+      SCHEDULER_DISPATCH_BATCH_SIZE: ${SCHEDULER_DISPATCH_BATCH_SIZE:-200}
+      SCHEDULED_CHECK_LEASE_MS: ${SCHEDULED_CHECK_LEASE_MS:-300000}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4101/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: worker
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      WORKER_HEALTH_PORT: '4102'
+      WORKER_HEALTH_PROBE_TIMEOUT_MS: ${WORKER_HEALTH_PROBE_TIMEOUT_MS:-2000}
+      WORKER_CHECK_PIPELINE_STALE_AFTER_MS: ${WORKER_CHECK_PIPELINE_STALE_AFTER_MS:-600000}
+      WORKER_CHECK_FAILURE_THRESHOLD: ${WORKER_CHECK_FAILURE_THRESHOLD:-3}
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:-mysql://linkalive:linkalive@mysql:3306/linkalive}
+      REDIS_URL: ${CONTAINER_REDIS_URL:-redis://redis:6379}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env}
+      CHECK_QUEUE_NAME: ${CHECK_QUEUE_NAME:-linkalive-checks}
+      NOTIFICATION_QUEUE_NAME: ${NOTIFICATION_QUEUE_NAME:-linkalive-notifications}
+      CHECK_WORKER_CONCURRENCY: ${CHECK_WORKER_CONCURRENCY:-25}
+      DESTINATION_CHECK_MAX_CONCURRENCY: ${DESTINATION_CHECK_MAX_CONCURRENCY:-4}
+      DESTINATION_CHECK_MAX_PER_MINUTE: ${DESTINATION_CHECK_MAX_PER_MINUTE:-60}
+      DESTINATION_CHECK_LEASE_MS: ${DESTINATION_CHECK_LEASE_MS:-45000}
+      DESTINATION_LIMIT_REDIS_TIMEOUT_MS: ${DESTINATION_LIMIT_REDIS_TIMEOUT_MS:-1000}
+      NOTIFICATION_WORKER_CONCURRENCY: ${NOTIFICATION_WORKER_CONCURRENCY:-5}
+      SCHEDULED_CHECK_LEASE_MS: ${SCHEDULED_CHECK_LEASE_MS:-300000}
+      NOTIFICATION_LEASE_MS: ${NOTIFICATION_LEASE_MS:-60000}
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-2000}
+      WORKER_REGION: ${WORKER_REGION:-default}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4102/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/login').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s

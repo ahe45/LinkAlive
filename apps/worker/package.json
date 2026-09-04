@@ -1,0 +1,29 @@
+{
+  "name": "@linkalive/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "pretest:integration": "pnpm --workspace-root db:generate && pnpm --workspace-root build:packages",
+    "test:integration": "vitest run integration/full-flow.integration.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@linkalive/database": "workspace:*",
+    "@linkalive/domain": "workspace:*",
+    "@linkalive/monitoring": "workspace:*",
+    "@linkalive/notifications": "workspace:*",
+    "bullmq": "^5.58.5",
+    "ioredis": "^5.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

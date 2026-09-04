@@ -1,0 +1,40 @@
+name: linkalive
+
+services:
+  mysql:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: linkalive
+      MARIADB_USER: linkalive
+      MARIADB_PASSWORD: linkalive
+      MARIADB_ROOT_PASSWORD: linkalive-root
+      TZ: UTC
+    ports:
+      - '127.0.0.1:3306:3306'
+    volumes:
+      - linkalive-mysql:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--appendfsync', 'everysec']
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - linkalive-redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  linkalive-mysql:
+  linkalive-redis:

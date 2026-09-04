@@ -1,0 +1,366 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum MonitorLifecycle {
+  ACTIVE
+  PAUSED
+  DELETED
+
+  @@map("monitor_lifecycle")
+}
+
+enum MonitorHealth {
+  PENDING
+  UP
+  SUSPECT
+  DOWN
+  RECOVERING
+
+  @@map("monitor_health")
+}
+
+enum HttpMethod {
+  GET
+  HEAD
+
+  @@map("http_method")
+}
+
+enum CheckSource {
+  SCHEDULED
+  MANUAL
+  TEST
+
+  @@map("check_source")
+}
+
+enum CheckOutcome {
+  SUCCESS
+  TARGET_FAILURE
+  PLATFORM_ERROR
+  INCONCLUSIVE
+
+  @@map("check_outcome")
+}
+
+enum CheckErrorType {
+  DNS_ERROR
+  CONNECT_TIMEOUT
+  CONNECTION_REFUSED
+  TLS_ERROR
+  TTFB_TIMEOUT
+  REQUEST_TIMEOUT
+  REDIRECT_ERROR
+  HTTP_STATUS_MISMATCH
+  CONTENT_MISMATCH
+  RESPONSE_LIMIT_EXCEEDED
+  NETWORK_ERROR
+  PLATFORM_ERROR
+
+  @@map("check_error_type")
+}
+
+enum ScheduledCheckStatus {
+  PENDING
+  ENQUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELED
+
+  @@map("scheduled_check_status")
+}
+
+enum IncidentStatus {
+  OPEN
+  RESOLVED
+  CANCELED
+
+  @@map("incident_status")
+}
+
+enum IncidentClosureReason {
+  RECOVERED
+  PAUSED
+  DELETED
+  CONFIG_CHANGED
+
+  @@map("incident_closure_reason")
+}
+
+enum NotificationEventType {
+  DOWN
+  RECOVERY
+  RESOLVED_SUMMARY
+  TEST
+
+  @@map("notification_event_type")
+}
+
+enum NotificationOutboxStatus {
+  PENDING
+  ENQUEUED
+  PROCESSING
+  RETRY
+  SENT
+  FAILED
+  CANCELED
+
+  @@map("notification_outbox_status")
+}
+
+enum NotificationDeliveryStatus {
+  ATTEMPTING
+  SUCCEEDED
+  FAILED
+  UNKNOWN
+
+  @@map("notification_delivery_status")
+}
+
+model Monitor {
+  id                          String           @id @default(uuid()) @db.Char(36)
+  name                        String           @db.VarChar(160)
+  requestUrlEncrypted         Bytes            @map("request_url_encrypted") @db.Blob
+  displayUrl                  String           @map("display_url") @db.VarChar(2048)
+  hostnameNormalized          String           @map("hostname_normalized") @db.VarChar(253)
+  method                      HttpMethod       @default(GET)
+  intervalSec                 Int              @default(60) @map("interval_sec")
+  timeoutMs                   Int              @default(10000) @map("timeout_ms")
+  expectedStatusMin           Int              @default(200) @map("expected_status_min") @db.SmallInt
+  expectedStatusMax           Int              @default(299) @map("expected_status_max") @db.SmallInt
+  expectedKeyword             String?          @map("expected_keyword") @db.VarChar(512)
+  followRedirects             Boolean          @default(true) @map("follow_redirects")
+  maxRedirects                Int              @default(5) @map("max_redirects") @db.SmallInt
+  failureThreshold            Int              @default(3) @map("failure_threshold") @db.SmallInt
+  recoveryThreshold           Int              @default(2) @map("recovery_threshold") @db.SmallInt
+  lifecycleStatus             MonitorLifecycle @default(ACTIVE) @map("lifecycle_status")
+  healthState                 MonitorHealth    @default(PENDING) @map("health_state")
+  consecutiveFailures         Int              @default(0) @map("consecutive_failures")
+  consecutiveSuccesses        Int              @default(0) @map("consecutive_successes")
+  failureStreakStartedAt      DateTime?        @map("failure_streak_started_at") @db.DateTime(3)
+  failureStreakFirstErrorType CheckErrorType?  @map("failure_streak_first_error_type")
+  lastCheckedAt               DateTime?        @map("last_checked_at") @db.DateTime(3)
+  lastSuccessAt               DateTime?        @map("last_success_at") @db.DateTime(3)
+  lastFailureAt               DateTime?        @map("last_failure_at") @db.DateTime(3)
+  lastStatusCode              Int?             @map("last_status_code") @db.SmallInt
+  lastTtfbMs                  Int?             @map("last_ttfb_ms")
+  lastTotalMs                 Int?             @map("last_total_ms")
+  lastErrorType               CheckErrorType?  @map("last_error_type")
+  nextCheckAt                 DateTime?        @map("next_check_at") @db.DateTime(3)
+  configVersion               Int              @default(1) @map("config_version")
+  createdAt                   DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                   DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt                   DateTime?        @map("deleted_at") @db.DateTime(3)
+
+  scheduledChecks ScheduledCheck[]
+  checkResults    CheckResult[]
+  incidents       Incident[]
+  channels        MonitorChannel[]
+  outboxEvents    NotificationOutbox[]
+
+  @@index([lifecycleStatus, nextCheckAt], map: "monitors_due_idx")
+  @@index([healthState], map: "monitors_health_idx")
+  @@index([hostnameNormalized], map: "monitors_hostname_idx")
+  @@index([deletedAt], map: "monitors_deleted_at_idx")
+  @@map("monitors")
+}
+
+model ScheduledCheck {
+  id                String               @id @default(uuid()) @db.Char(36)
+  monitorId         String               @map("monitor_id") @db.Char(36)
+  scheduledAt       DateTime             @map("scheduled_at") @db.DateTime(3)
+  configVersion     Int                  @map("config_version")
+  status            ScheduledCheckStatus @default(PENDING)
+  leaseOwner        String?              @map("lease_owner") @db.VarChar(160)
+  leaseUntil        DateTime?            @map("lease_until") @db.DateTime(3)
+  queueJobId        String?              @map("queue_job_id") @db.VarChar(160)
+  attemptCount      Int                  @default(0) @map("attempt_count")
+  failureReasonSafe String?              @map("failure_reason_safe") @db.VarChar(1024)
+  enqueuedAt        DateTime?            @map("enqueued_at") @db.DateTime(3)
+  startedAt         DateTime?            @map("started_at") @db.DateTime(3)
+  completedAt       DateTime?            @map("completed_at") @db.DateTime(3)
+  canceledAt        DateTime?            @map("canceled_at") @db.DateTime(3)
+  createdAt         DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
+  activeMonitorId   String?              @map("active_monitor_id") @ignore @db.VarChar(36)
+
+  monitor Monitor      @relation(fields: [monitorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  result  CheckResult?
+
+  @@unique([monitorId, scheduledAt, configVersion], map: "scheduled_checks_schedule_key")
+  @@unique([id, monitorId, configVersion], map: "scheduled_checks_result_identity_key")
+  @@index([status, leaseUntil], map: "scheduled_checks_reconcile_idx")
+  @@index([monitorId, createdAt(sort: Desc)], map: "scheduled_checks_monitor_created_idx")
+  @@map("scheduled_checks")
+}
+
+model CheckResult {
+  id                 String          @id @default(uuid()) @db.Char(36)
+  monitorId          String?         @map("monitor_id") @db.Char(36)
+  scheduledCheckId   String?         @map("scheduled_check_id") @db.Char(36)
+  source             CheckSource
+  outcome            CheckOutcome
+  configVersion      Int?            @map("config_version")
+  displayUrlSnapshot String          @map("display_url_snapshot") @db.VarChar(2048)
+  startedAt          DateTime        @map("started_at") @db.DateTime(3)
+  finishedAt         DateTime        @map("finished_at") @db.DateTime(3)
+  statusCode         Int?            @map("status_code") @db.SmallInt
+  ttfbMs             Int?            @map("ttfb_ms")
+  totalMs            Int             @map("total_ms")
+  errorType          CheckErrorType? @map("error_type")
+  errorMessageSafe   String?         @map("error_message_safe") @db.VarChar(1024)
+  workerRegion       String?         @map("worker_region") @db.VarChar(80)
+  redirectCount      Int             @default(0) @map("redirect_count") @db.SmallInt
+  responseBytesRead  Int?            @map("response_bytes_read")
+  createdAt          DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+
+  monitor        Monitor?        @relation(fields: [monitorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  scheduledCheck ScheduledCheck? @relation(fields: [scheduledCheckId, monitorId, configVersion], references: [id, monitorId, configVersion], onDelete: Restrict, onUpdate: Restrict, map: "check_results_scheduled_identity_fkey")
+
+  @@unique([scheduledCheckId, monitorId, configVersion], map: "check_results_scheduled_identity_key")
+  @@index([monitorId, startedAt(sort: Desc)], map: "check_results_monitor_started_idx")
+  @@index([outcome, startedAt], map: "check_results_outcome_started_idx")
+  @@index([createdAt], map: "check_results_retention_idx")
+  @@map("check_results")
+}
+
+model Incident {
+  id             String                 @id @default(uuid()) @db.Char(36)
+  monitorId      String                 @map("monitor_id") @db.Char(36)
+  configVersion  Int                    @map("config_version")
+  status         IncidentStatus         @default(OPEN)
+  firstFailureAt DateTime               @map("first_failure_at") @db.DateTime(3)
+  detectedAt     DateTime               @map("detected_at") @db.DateTime(3)
+  resolvedAt     DateTime?              @map("resolved_at") @db.DateTime(3)
+  canceledAt     DateTime?              @map("canceled_at") @db.DateTime(3)
+  firstErrorType CheckErrorType?        @map("first_error_type")
+  lastErrorType  CheckErrorType?        @map("last_error_type")
+  closureReason  IncidentClosureReason? @map("closure_reason")
+  createdAt      DateTime               @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime               @updatedAt @map("updated_at") @db.DateTime(3)
+  openMonitorId  String?                @map("open_monitor_id") @ignore @db.VarChar(36)
+
+  monitor      Monitor              @relation(fields: [monitorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  outboxEvents NotificationOutbox[]
+
+  @@index([monitorId, detectedAt(sort: Desc)], map: "incidents_monitor_detected_idx")
+  @@index([status, detectedAt(sort: Desc)], map: "incidents_status_detected_idx")
+  @@map("incidents")
+}
+
+model NotificationChannel {
+  id              String                  @id @default(uuid()) @db.Char(36)
+  type            String   @db.VarChar(32)
+  displayName     String                  @map("display_name") @db.VarChar(160)
+  encryptedConfig Bytes                   @map("encrypted_config") @db.Blob
+  verifiedAt      DateTime?               @map("verified_at") @db.DateTime(3)
+  enabled         Boolean                 @default(true)
+  createdAt       DateTime                @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime                @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt       DateTime?               @map("deleted_at") @db.DateTime(3)
+
+  monitors     MonitorChannel[]
+  outboxEvents NotificationOutbox[]
+
+  @@index([enabled, deletedAt], map: "notification_channels_active_idx")
+  @@map("notification_channels")
+}
+
+model MonitorChannel {
+  monitorId        String   @map("monitor_id") @db.Char(36)
+  channelId        String   @map("channel_id") @db.Char(36)
+  notifyOnDown     Boolean  @default(true) @map("notify_on_down")
+  notifyOnRecovery Boolean  @default(true) @map("notify_on_recovery")
+  createdAt        DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+
+  monitor Monitor             @relation(fields: [monitorId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  channel NotificationChannel @relation(fields: [channelId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([monitorId, channelId])
+  @@index([channelId], map: "monitor_channels_channel_idx")
+  @@map("monitor_channels")
+}
+
+model NotificationOutbox {
+  id                         String                   @id @default(uuid()) @db.Char(36)
+  monitorId                  String                   @map("monitor_id") @db.Char(36)
+  incidentId                 String?                  @map("incident_id") @db.Char(36)
+  channelId                  String                   @map("channel_id") @db.Char(36)
+  eventType                  NotificationEventType    @map("event_type")
+  sequence                   Int
+  dedupeKey                  String                   @unique(map: "notification_outbox_dedupe_key") @map("dedupe_key") @db.VarChar(512)
+  payloadSafe                Json                     @map("payload_safe") @db.Json
+  channelTypeSnapshot        String                   @map("channel_type_snapshot") @db.VarChar(32)
+  channelDisplayNameSnapshot String                   @map("channel_display_name_snapshot") @db.VarChar(160)
+  encryptedConfigSnapshot    Bytes                    @map("encrypted_config_snapshot") @db.Blob
+  status                     NotificationOutboxStatus @default(PENDING)
+  availableAt                DateTime                 @default(now()) @map("available_at") @db.DateTime(3)
+  leaseOwner                 String?                  @map("lease_owner") @db.VarChar(160)
+  leaseUntil                 DateTime?                @map("lease_until") @db.DateTime(3)
+  queueJobId                 String?                  @map("queue_job_id") @db.VarChar(160)
+  messageId                  String                   @map("message_id") @db.VarChar(512)
+  attemptCount               Int                      @default(0) @map("attempt_count")
+  maxAttempts                Int                      @default(3) @map("max_attempts") @db.SmallInt
+  lastErrorSafe              String?                  @map("last_error_safe") @db.VarChar(1024)
+  enqueuedAt                 DateTime?                @map("enqueued_at") @db.DateTime(3)
+  processingAt               DateTime?                @map("processing_at") @db.DateTime(3)
+  sentAt                     DateTime?                @map("sent_at") @db.DateTime(3)
+  failedAt                   DateTime?                @map("failed_at") @db.DateTime(3)
+  canceledAt                 DateTime?                @map("canceled_at") @db.DateTime(3)
+  createdAt                  DateTime                 @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                  DateTime                 @updatedAt @map("updated_at") @db.DateTime(3)
+
+  monitor    Monitor                @relation(fields: [monitorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  incident   Incident?              @relation(fields: [incidentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  channel    NotificationChannel    @relation(fields: [channelId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  deliveries NotificationDelivery[]
+
+  @@unique([incidentId, channelId, sequence], map: "notification_outbox_incident_channel_sequence_key")
+  @@index([status, availableAt], map: "notification_outbox_dispatch_idx")
+  @@index([status, leaseUntil], map: "notification_outbox_reconcile_idx")
+  @@map("notification_outbox")
+}
+
+model NotificationDelivery {
+  id                String                     @id @default(uuid()) @db.Char(36)
+  outboxId          String                     @map("outbox_id") @db.Char(36)
+  attempt           Int
+  status            NotificationDeliveryStatus @default(ATTEMPTING)
+  messageId         String                     @map("message_id") @db.VarChar(512)
+  providerMessageId String?                    @map("provider_message_id") @db.VarChar(512)
+  errorSafe         String?                    @map("error_safe") @db.VarChar(1024)
+  startedAt         DateTime                   @default(now()) @map("started_at") @db.DateTime(3)
+  finishedAt        DateTime?                  @map("finished_at") @db.DateTime(3)
+  sentAt            DateTime?                  @map("sent_at") @db.DateTime(3)
+  createdAt         DateTime                   @default(now()) @map("created_at") @db.DateTime(3)
+
+  outbox NotificationOutbox @relation(fields: [outboxId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([outboxId, attempt], map: "notification_deliveries_attempt_key")
+  @@index([status, createdAt], map: "notification_deliveries_status_created_idx")
+  @@map("notification_deliveries")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Char(36)
+  actorId      String?  @map("actor_id") @db.VarChar(255)
+  action       String   @db.VarChar(120)
+  targetType   String   @map("target_type") @db.VarChar(80)
+  targetId     String   @map("target_id") @db.VarChar(255)
+  metadataSafe Json?    @map("metadata_safe") @db.Json
+  requestId    String?  @map("request_id") @db.VarChar(160)
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  @@index([targetType, targetId, createdAt(sort: Desc)], map: "audit_logs_target_created_idx")
+  @@index([actorId, createdAt(sort: Desc)], map: "audit_logs_actor_created_idx")
+  @@index([createdAt], map: "audit_logs_created_idx")
+  @@map("audit_logs")
+}
