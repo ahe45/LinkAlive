@@ -36,9 +36,13 @@ infra/compose.prod.yaml 외부 관리형 MySQL/MariaDB·Redis용 운영 스택
 
 ### 준비물
 
-- Node.js 22 이상
-- pnpm 11 이상
-- Redis를 직접 실행하지 않는 경우 Docker Desktop 또는 Docker Engine + Compose
+- Windows 10/11과 Windows Package Manager(`winget`)
+- Docker Desktop을 처음 설치하는 PC에서는 WSL 2/가상화 활성화 및 Windows 재시작이 필요할 수 있음
+
+Windows의 `start_server.bat`는 Node.js 22 이상과 pnpm 11을 확인해 없거나 오래된 경우
+`winget`과 npm으로 설치합니다. 로컬 MySQL/MariaDB 또는 Redis가 실행 중이 아니면 Docker
+Desktop도 설치·시작하고 필요한 컨테이너를 자동으로 준비합니다. 기존 `.env`는 보존하며,
+파일이 없을 때만 `admin / 1234` 계정과 무작위 로컬 비밀키를 포함한 설정을 생성합니다.
 
 ### 1. 환경 변수와 DB 준비
 
@@ -85,8 +89,8 @@ pnpm db:deploy
 
 ### 3. 애플리케이션 실행
 
-Windows에서는 루트의 `start_server.bat`를 더블클릭하거나 다음과 같이 실행하면 의존성 확인,
-DB migration 적용 후 전체 서버가 시작됩니다.
+Windows에서는 루트의 `start_server.bat`를 더블클릭하거나 다음과 같이 실행하면 필수 프로그램,
+환경설정, 로컬 DB·Redis, 의존성, DB migration을 차례로 준비한 후 전체 서버가 시작됩니다.
 
 ```powershell
 .\start_server.bat
