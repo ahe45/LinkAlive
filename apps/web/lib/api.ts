@@ -17,6 +17,7 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:
   /\/$/,
   '',
 );
+const API_REQUEST_TIMEOUT_MS = 10_000;
 
 interface ApiErrorBody {
   message?: string | string[];
@@ -61,6 +62,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       headers,
       credentials: 'include',
       cache: 'no-store',
+      signal: init.signal ?? AbortSignal.timeout(API_REQUEST_TIMEOUT_MS),
     });
   } catch {
     throw new ApiError('API 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해 주세요.', 0);

@@ -14,7 +14,7 @@ call :check_application_ports
 if "!APP_PORT_STATUS!"=="2" (
   echo LinkAlive is already running.
   echo Web: !LINKALIVE_WEB_URL!
-  echo API readiness: !LINKALIVE_API_URL!/health/ready
+  echo API readiness: !LINKALIVE_WEB_URL!/linkalive-api/health/ready
   exit /b 0
 )
 if not "!APP_PORT_STATUS!"=="0" (
@@ -53,9 +53,9 @@ if errorlevel 1 (
 echo.
 echo Starting LinkAlive...
 echo Web: !LINKALIVE_WEB_URL!
-echo API readiness: !LINKALIVE_API_URL!/health/ready
+echo API readiness: !LINKALIVE_WEB_URL!/linkalive-api/health/ready
 if not "!LINKALIVE_ACCESS_HOST!"=="localhost" (
-  echo LAN access requires Windows Firewall inbound TCP ports 3001 and 4000.
+  echo LAN access requires Windows Firewall inbound TCP port 3001.
 )
 echo Press Ctrl+C to stop all application processes.
 call pnpm dev
@@ -71,9 +71,8 @@ if not defined LINKALIVE_ACCESS_HOST (
 
 if not defined LINKALIVE_ACCESS_HOST set "LINKALIVE_ACCESS_HOST=localhost"
 set "LINKALIVE_WEB_URL=http://!LINKALIVE_ACCESS_HOST!:3001"
-set "LINKALIVE_API_URL=http://!LINKALIVE_ACCESS_HOST!:4000"
 set "WEB_ORIGIN=!LINKALIVE_WEB_URL!"
-set "NEXT_PUBLIC_API_BASE_URL=!LINKALIVE_API_URL!"
+set "NEXT_PUBLIC_API_BASE_URL=/linkalive-api"
 set "APP_BASE_URL=!LINKALIVE_WEB_URL!"
 exit /b 0
 
