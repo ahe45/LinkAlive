@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '@/components/Icon';
-import { authApi, getErrorMessage, isUnauthorized } from '@/lib/api';
+import { authApi } from '@/lib/api';
 import type { AuthUser } from '@/lib/types';
 
 const navigation = [
@@ -12,35 +12,17 @@ const navigation = [
   { href: '/notifications', label: '알림 채널', icon: 'bell' as const },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  initialUser,
+}: {
+  children: React.ReactNode;
+  initialUser: AuthUser;
+}) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  const loadUser = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await authApi.me();
-      setUser(response.user);
-    } catch (loadError) {
-      if (isUnauthorized(loadError)) {
-        router.replace('/login');
-        return;
-      }
-      setError(getErrorMessage(loadError));
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
-
-  useEffect(() => {
-    void loadUser();
-  }, [loadUser]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -55,34 +37,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       router.refresh();
       setLoggingOut(false);
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="auth-check-screen" role="status">
-        <Brand />
-        <span className="spinner spinner-large" />
-        <p>관리자 세션을 확인하고 있습니다</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="auth-check-screen">
-        <Brand />
-        <div className="connection-error" role="alert">
-          <span>
-            <Icon name="alert" size={23} />
-          </span>
-          <h1>서비스에 연결할 수 없습니다</h1>
-          <p>{error}</p>
-          <button type="button" className="button button-primary" onClick={() => void loadUser()}>
-            <Icon name="refresh" size={17} /> 다시 연결
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -129,9 +83,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="sidebar-user">
-          <span className="user-avatar">{user?.username.slice(0, 1).toUpperCase()}</span>
+          <span className="user-avatar">{initialUser.username.slice(0, 1).toUpperCase()}</span>
           <div className="user-info">
-            <strong>{user?.username}</strong>
+            <strong>{initialUser.username}</strong>
             <span>관리자</span>
           </div>
           <button
