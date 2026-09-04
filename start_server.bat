@@ -8,10 +8,13 @@ set "REQUIRED_NODE_MAJOR=22"
 set "REQUIRED_PNPM_VERSION=11.19.0"
 set "REDIS_WINGET_ID=taizod1024.redis-windows-fork"
 
+call :configure_network_access
+
 call :check_application_ports
 if "!APP_PORT_STATUS!"=="2" (
   echo LinkAlive is already running.
-  echo Web: http://localhost:3001
+  echo Web: !LINKALIVE_WEB_URL!
+  echo API readiness: !LINKALIVE_API_URL!/health/ready
   exit /b 0
 )
 if not "!APP_PORT_STATUS!"=="0" (
@@ -49,10 +52,30 @@ if errorlevel 1 (
 
 echo.
 echo Starting LinkAlive...
-echo Web: http://localhost:3001
+echo Web: !LINKALIVE_WEB_URL!
+echo API readiness: !LINKALIVE_API_URL!/health/ready
+if not "!LINKALIVE_ACCESS_HOST!"=="localhost" (
+  echo LAN access requires Windows Firewall inbound TCP ports 3001 and 4000.
+)
 echo Press Ctrl+C to stop all application processes.
 call pnpm dev
 exit /b !errorlevel!
+
+:configure_network_access
+set "LINKALIVE_ACCESS_HOST="
+if defined LINKALIVE_HOST set "LINKALIVE_ACCESS_HOST=!LINKALIVE_HOST!"
+
+if not defined LINKALIVE_ACCESS_HOST (
+  for /f "delims=" %%I in ('powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\detect-network-address.ps1"') do set "LINKALIVE_ACCESS_HOST=%%I"
+)
+
+if not defined LINKALIVE_ACCESS_HOST set "LINKALIVE_ACCESS_HOST=localhost"
+set "LINKALIVE_WEB_URL=http://!LINKALIVE_ACCESS_HOST!:3001"
+set "LINKALIVE_API_URL=http://!LINKALIVE_ACCESS_HOST!:4000"
+set "WEB_ORIGIN=!LINKALIVE_WEB_URL!"
+set "NEXT_PUBLIC_API_BASE_URL=!LINKALIVE_API_URL!"
+set "APP_BASE_URL=!LINKALIVE_WEB_URL!"
+exit /b 0
 
 :check_application_ports
 powershell -NoProfile -Command "$ports = 3001, 4000, 4101, 4102; $used = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $ports -contains $_.LocalPort } | Select-Object -ExpandProperty LocalPort -Unique); if ($used.Count -eq 0) { exit 0 }; if ($used.Count -eq $ports.Count) { exit 2 }; exit 1"

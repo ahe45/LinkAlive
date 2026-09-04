@@ -92,8 +92,16 @@ pnpm db:deploy
 
 Windows에서는 루트의 `start_server.bat`를 더블클릭하거나 다음과 같이 실행하면 필수 프로그램,
 환경설정, Redis 설치·실행, 로컬 DB 연결 상태, 의존성, DB migration을 차례로 확인한 후 전체 서버가 시작됩니다.
+스크립트는 기본 네트워크 어댑터의 IPv4 주소를 자동으로 감지하고, 화면에 표시된 LAN URL을
+웹/API origin으로 사용합니다. 특정 호스트명이나 주소를 사용하려면 실행 전에 `LINKALIVE_HOST`를
+설정하세요. 다른 장치에서 접속하려면 Windows 방화벽에서 TCP 3001·4000 포트를 로컬 서브넷에
+허용해야 합니다.
 
 ```powershell
+.\start_server.bat
+
+# 자동 감지 대신 특정 주소를 사용할 때
+$env:LINKALIVE_HOST = '192.168.1.200'
 .\start_server.bat
 ```
 
