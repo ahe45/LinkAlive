@@ -3,7 +3,8 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/Icon';
-import { authApi, getErrorMessage } from '@/lib/api';
+import { authApi, dashboardApi, getErrorMessage } from '@/lib/api';
+import type { PublicAvailabilityStats } from '@/lib/types';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +13,8 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<PublicAvailabilityStats | null>(null);
+  const [availabilityError, setAvailabilityError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -28,6 +31,21 @@ export default function LoginPage() {
       active = false;
     };
   }, [router]);
+
+  useEffect(() => {
+    let active = true;
+    dashboardApi
+      .publicStats()
+      .then((stats) => {
+        if (active) setAvailability(stats);
+      })
+      .catch(() => {
+        if (active) setAvailabilityError(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,15 +90,43 @@ export default function LoginPage() {
           </div>
           <div className="visual-status-card">
             <div className="mini-chart">
-              {[42, 55, 38, 64, 48, 68, 73, 60, 78, 72, 84, 80].map((height, index) => (
-                <span key={index} style={{ height: `${height}%` }} />
-              ))}
+              {(availability?.daily ?? Array.from({ length: 10 }, () => null)).map(
+                (item, index) => {
+                  const percent = item?.availabilityPercent ?? null;
+                  return (
+                    <span
+                      className={percent === null ? 'mini-chart-empty' : undefined}
+                      key={item?.startedAt ?? index}
+                      style={{ height: `${percent === null ? 8 : Math.max(percent, 4)}%` }}
+                      title={
+                        item
+                          ? `${new Date(item.startedAt).toLocaleDateString('ko-KR')}: ${
+                              percent === null ? '검사 없음' : `${percent.toFixed(2)}%`
+                            }`
+                          : undefined
+                      }
+                    />
+                  );
+                },
+              )}
             </div>
             <div>
               <span className="live-dot" /> 실시간 검사 작동 중
             </div>
-            <strong>99.98%</strong>
-            <small>최근 가용성</small>
+            <strong>
+              {availability?.availabilityPercent === null || !availability
+                ? '—'
+                : `${availability.availabilityPercent.toFixed(2)}%`}
+            </strong>
+            <small>
+              {availabilityError
+                ? '통계를 불러오지 못했습니다'
+                : availability?.availabilityPercent === null
+                  ? '최근 10일 검사 데이터 없음'
+                  : availability
+                    ? '최근 10일 가용성'
+                    : '최근 10일 통계 집계 중'}
+            </small>
           </div>
         </div>
       </section>

@@ -16,6 +16,7 @@ import type {
   NotificationChannel,
   NotificationChannelInput,
   NotificationChannelPatch,
+  PublicAvailabilityStats,
 } from '@/lib/types';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '/linkalive-api').replace(/\/$/, '');
@@ -146,6 +147,7 @@ export const sessionsApi = {
 
 export const dashboardApi = {
   summary: () => apiFetch<DashboardSummary>('/api/v1/dashboard/summary'),
+  publicStats: () => apiFetch<PublicAvailabilityStats>('/api/v1/dashboard/public-stats'),
 };
 
 export const monitorsApi = {

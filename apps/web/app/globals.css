@@ -717,6 +717,10 @@ svg {
   background: #39c495;
 }
 
+.mini-chart span.mini-chart-empty {
+  background: rgba(155, 170, 188, 0.35);
+}
+
 .visual-status-card > div:nth-child(2) {
   grid-column: 1;
   margin-bottom: 7px;

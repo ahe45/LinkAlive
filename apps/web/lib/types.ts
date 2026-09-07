@@ -149,6 +149,17 @@ export interface DashboardSummary {
   warning: number;
 }
 
+export interface PublicAvailabilityStats {
+  windowDays: number;
+  from: string;
+  to: string;
+  availabilityPercent: number | null;
+  daily: Array<{
+    startedAt: string;
+    availabilityPercent: number | null;
+  }>;
+}
+
 export type NotificationChannelType = 'TELEGRAM';
 
 export interface NotificationChannel {
