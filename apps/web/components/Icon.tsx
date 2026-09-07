@@ -169,9 +169,8 @@ export function Icon({ name, size = 18, ...props }: IconProps) {
     ),
     refresh: (
       <>
-        <path d="M20 7v5h-5" />
-        <path d="M4 17v-5h5" />
-        <path d="M6.1 9A7 7 0 0 1 18.5 6L20 8M4 16l1.5 2A7 7 0 0 0 18 15" />
+        <path d="M20 8a8 8 0 1 0 1 4" />
+        <path d="M20 3v5h-5" />
       </>
     ),
     search: (
