@@ -6,6 +6,7 @@ import type { AuthenticatedUser } from './auth.types.js';
 import type { SessionPayload } from './session.js';
 
 const MAX_USER_AGENT_LENGTH = 512;
+const SESSION_TOUCH_INTERVAL_MS = 60_000;
 
 function sessionCutoff(now: Date): Date {
   return new Date(now.getTime() - getConfig().sessionIdleTimeoutMinutes * 60_000);
@@ -52,7 +53,16 @@ export class SessionsService {
     });
     if (!session?.account.enabled) return null;
 
-    await prisma.loginSession.update({ where: { id: session.id }, data: { lastSeenAt: now } });
+    if (now.getTime() - session.lastSeenAt.getTime() >= SESSION_TOUCH_INTERVAL_MS) {
+      await prisma.loginSession.updateMany({
+        where: {
+          id: session.id,
+          revokedAt: null,
+          lastSeenAt: { lte: new Date(now.getTime() - SESSION_TOUCH_INTERVAL_MS) },
+        },
+        data: { lastSeenAt: now },
+      });
+    }
     return {
       id: session.account.id,
       username: session.account.username,
