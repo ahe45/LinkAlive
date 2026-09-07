@@ -3301,3 +3301,173 @@ svg {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Main content typography is intentionally 50% larger than the compact
+   navigation chrome. Keep these overrides scoped so the sidebar and login
+   screen retain their existing proportions. */
+.main-content {
+  font-size: 21px;
+}
+
+.main-content .page-eyebrow,
+.main-content .field-label small,
+.main-content .field-help,
+.main-content .field-error,
+.main-content .status-badge,
+.main-content .plain-badge,
+.main-content .section-number,
+.main-content .table-meta strong,
+.main-content .current-value,
+.main-content .range-inputs span,
+.main-content .advanced-settings-copy small,
+.main-content .advanced-settings-current,
+.main-content .advanced-settings-heading p,
+.main-content .test-section p,
+.main-content .incident-alert p,
+.main-content .test-result-main p,
+.main-content .detail-url,
+.main-content .config-list dd,
+.main-content .history-row,
+.main-content .history-row strong,
+.main-content .channel-type-switcher label,
+.main-content .role-badge,
+.main-content .account-status,
+.main-content .account-identity small,
+.main-content .session-account small {
+  font-size: 15px;
+}
+
+.main-content .breadcrumbs,
+.main-content .card-header p,
+.main-content .input-with-unit > span,
+.main-content .form-error,
+.main-content .state-panel p,
+.main-content .empty-state p,
+.main-content .inline-notice,
+.main-content .summary-label,
+.main-content .search-field input,
+.main-content .filter-field select,
+.main-content .form-section-heading p,
+.main-content .channel-choice strong,
+.main-content .channel-empty-note strong,
+.main-content .tabs button,
+.main-content .incident-item-heading strong,
+.main-content .incident-item-heading > span,
+.main-content .latest-error strong,
+.main-content .latest-success strong,
+.main-content .account-table-header,
+.main-content .session-table-header {
+  font-size: 16.5px;
+}
+
+.main-content .text-button,
+.main-content .field-label,
+.main-content .page-loader,
+.main-content .monitor-identity a,
+.main-content .test-result-main strong,
+.main-content .test-result-metrics dd,
+.main-content .incident-alert strong,
+.main-content .notification-guide strong,
+.main-content .channel-card h3,
+.main-content .account-row,
+.main-content .session-row,
+.main-content .import-errors p {
+  font-size: 18px;
+}
+
+.main-content .button,
+.main-content .page-header p,
+.main-content .field input,
+.main-content .field select,
+.main-content .state-panel strong,
+.main-content .advanced-settings-copy strong,
+.main-content .test-section h3,
+.main-content .account-identity strong,
+.main-content .session-account strong,
+.main-content .import-success {
+  font-size: 19.5px;
+}
+
+.main-content .button.button-small {
+  font-size: 18px;
+}
+
+.main-content .field-label em,
+.main-content .summary-detail,
+.main-content .monitor-table-header,
+.main-content .monitor-identity > div > span,
+.main-content .table-meta span,
+.main-content .channel-choice small,
+.main-content .channel-empty-note p,
+.main-content .test-result-title,
+.main-content .test-result-metrics dt,
+.main-content .form-actions p,
+.main-content .tab-count,
+.main-content .detail-metrics-grid article > span,
+.main-content .config-list dt,
+.main-content .latest-error p,
+.main-content .latest-success p,
+.main-content .history-header,
+.main-content .incident-item dd,
+.main-content .incident-notification strong,
+.main-content .notification-guide small,
+.main-content .channel-config-list dd {
+  font-size: 13.5px;
+}
+
+.main-content .detail-metrics-grid small,
+.main-content .history-row small,
+.main-content .incident-item dt,
+.main-content .incident-notification small,
+.main-content .delivery-badge,
+.main-content .delivery-attempt,
+.main-content .channel-config-list dt,
+.main-content .channel-card-meta,
+.main-content .verification-badge,
+.main-content .monitor-row > div[data-label]::before,
+.main-content .history-row > span::before {
+  font-size: 12px;
+}
+
+.main-content .connection-error h1 {
+  font-size: 30px;
+}
+
+.main-content .page-header h1 {
+  font-size: clamp(37.5px, 3.3vw, 46.5px);
+}
+
+.main-content .card-header h2,
+.main-content .empty-state h3 {
+  font-size: 22.5px;
+}
+
+.main-content .summary-value {
+  font-size: 43.5px;
+}
+
+.main-content .form-section-heading h2 {
+  font-size: 24px;
+}
+
+.main-content .advanced-settings-heading h3 {
+  font-size: 21px;
+}
+
+.main-content .detail-title-line h1 {
+  font-size: 36px;
+}
+
+.main-content .detail-owner {
+  font-size: 1.17rem;
+}
+
+.main-content .detail-metrics-grid strong {
+  font-size: 27px;
+}
+
+@media (max-width: 740px) {
+  .main-content .summary-value {
+    font-size: 37.5px;
+  }
+}
