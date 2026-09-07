@@ -1399,7 +1399,7 @@ svg {
   justify-content: center;
 }
 .filter-field select {
-  width: 118px;
+  width: 150px;
   height: 36px;
   padding: 0 28px 0 10px;
   font-size: 11px;
