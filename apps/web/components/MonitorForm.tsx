@@ -184,86 +184,78 @@ export function MonitorForm({
 
   return (
     <form className="monitor-form" onSubmit={submit} noValidate>
-      {showNotificationChannels ? (
-        <section className="form-section">
-          <div className="form-section-heading">
-            <span className="section-number">01</span>
-            <div>
-              <h2>기본 정보</h2>
-              <p>구분하기 쉬운 이름과 검사할 주소를 입력하세요.</p>
-            </div>
+      <section className="form-section">
+        <div className="form-section-heading">
+          <span className="section-number">01</span>
+          <div>
+            <h2>기본 정보</h2>
+            <p>구분하기 쉬운 이름과 검사할 주소를 입력하세요.</p>
           </div>
-          <div className="form-grid">
-            <label className="field field-span-2">
-              <span className="field-label">
-                모니터 이름 <em>필수</em>
+        </div>
+        <div className="form-grid">
+          <label className="field field-span-2">
+            <span className="field-label">
+              모니터 이름 <em>필수</em>
+            </span>
+            <input
+              type="text"
+              value={value.name}
+              onChange={(event) => patchValue({ name: event.target.value })}
+              placeholder="예: 공식 웹사이트"
+              maxLength={160}
+              aria-invalid={Boolean(errors.name)}
+            />
+            {errors.name ? <span className="field-error">{errors.name}</span> : null}
+          </label>
+
+          <label className="field field-span-2">
+            <span className="field-label">검사 URL {mode === 'create' ? <em>필수</em> : null}</span>
+            {mode === 'edit' && currentDisplayUrl ? (
+              <span className="current-value">
+                <Icon name="globe" size={15} /> 현재 주소: <strong>{currentDisplayUrl}</strong>
+              </span>
+            ) : null}
+            <span className="input-with-prefix">
+              <span>
+                <Icon name="globe" size={17} />
               </span>
               <input
-                type="text"
-                value={value.name}
-                onChange={(event) => patchValue({ name: event.target.value })}
-                placeholder="예: 공식 웹사이트"
-                maxLength={160}
-                aria-invalid={Boolean(errors.name)}
+                type="url"
+                value={value.url}
+                onChange={(event) => patchValue({ url: event.target.value })}
+                placeholder={
+                  mode === 'edit' ? '주소를 변경할 때만 새 URL 입력' : 'https://example.com/health'
+                }
+                inputMode="url"
+                aria-invalid={Boolean(errors.url)}
               />
-              {errors.name ? <span className="field-error">{errors.name}</span> : null}
-            </label>
+            </span>
+            {errors.url ? <span className="field-error">{errors.url}</span> : null}
+            <span className="field-help">
+              http:// 또는 https:// 주소를 입력하세요. localhost, 사설 IP, 사용자 지정 포트도 사용할
+              수 있습니다.
+            </span>
+          </label>
 
-            <label className="field field-span-2">
-              <span className="field-label">
-                검사 URL {mode === 'create' ? <em>필수</em> : null}
-              </span>
-              {mode === 'edit' && currentDisplayUrl ? (
-                <span className="current-value">
-                  <Icon name="globe" size={15} /> 현재 주소: <strong>{currentDisplayUrl}</strong>
-                </span>
-              ) : null}
-              <span className="input-with-prefix">
-                <span>
-                  <Icon name="globe" size={17} />
-                </span>
-                <input
-                  type="url"
-                  value={value.url}
-                  onChange={(event) => patchValue({ url: event.target.value })}
-                  placeholder={
-                    mode === 'edit'
-                      ? '주소를 변경할 때만 새 URL 입력'
-                      : 'https://example.com/health'
-                  }
-                  inputMode="url"
-                  aria-invalid={Boolean(errors.url)}
-                />
-              </span>
-              {errors.url ? <span className="field-error">{errors.url}</span> : null}
-              <span className="field-help">
-                http:// 또는 https:// 주소를 입력하세요. localhost, 사설 IP, 사용자 지정 포트도
-                사용할 수 있습니다.
-              </span>
-            </label>
-
-            <label className="field">
-              <span className="field-label">검사 주기 (초)</span>
-              <span className="input-with-unit input-with-unit-compact">
-                <input
-                  type="number"
-                  min={MIN_INTERVAL_SECONDS}
-                  max={MAX_INTERVAL_SECONDS}
-                  step={1}
-                  value={value.intervalSec}
-                  onChange={(event) => patchValue({ intervalSec: Number(event.target.value) })}
-                  aria-invalid={Boolean(errors.intervalSec)}
-                />
-                <span>초</span>
-              </span>
-              {errors.intervalSec ? (
-                <span className="field-error">{errors.intervalSec}</span>
-              ) : null}
-              <span className="field-help">5초부터 86,400초(24시간)까지 입력할 수 있습니다.</span>
-            </label>
-          </div>
-        </section>
-      ) : null}
+          <label className="field">
+            <span className="field-label">검사 주기 (초)</span>
+            <span className="input-with-unit input-with-unit-compact">
+              <input
+                type="number"
+                min={MIN_INTERVAL_SECONDS}
+                max={MAX_INTERVAL_SECONDS}
+                step={1}
+                value={value.intervalSec}
+                onChange={(event) => patchValue({ intervalSec: Number(event.target.value) })}
+                aria-invalid={Boolean(errors.intervalSec)}
+              />
+              <span>초</span>
+            </span>
+            {errors.intervalSec ? <span className="field-error">{errors.intervalSec}</span> : null}
+            <span className="field-help">5초부터 86,400초(24시간)까지 입력할 수 있습니다.</span>
+          </label>
+        </div>
+      </section>
 
       <section className="form-section">
         <div className="form-section-heading">
@@ -314,58 +306,60 @@ export function MonitorForm({
         </InlineNotice>
       </section>
 
-      <section className="form-section">
-        <div className="form-section-heading">
-          <span className="section-number">03</span>
-          <div>
-            <h2>알림 채널</h2>
-            <p>장애와 복구 메시지를 받을 채널을 선택하세요.</p>
-          </div>
-        </div>
-        {channels.length ? (
-          <div className="channel-select-grid">
-            {channels.map((channel) => {
-              const checked = value.channelIds.includes(channel.id);
-              return (
-                <label
-                  className={`channel-choice${checked ? ' channel-choice-selected' : ''}`}
-                  key={channel.id}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(event) => {
-                      const channelIds = event.target.checked
-                        ? [...value.channelIds, channel.id]
-                        : value.channelIds.filter((id) => id !== channel.id);
-                      patchValue({ channelIds });
-                    }}
-                  />
-                  <span className={`channel-icon channel-${channel.type.toLowerCase()}`}>
-                    <Icon name="telegram" size={19} />
-                  </span>
-                  <span>
-                    <strong>{channel.displayName}</strong>
-                    <small>{channel.chatId ?? 'Chat ID를 불러올 수 없음'}</small>
-                  </span>
-                  <span className="choice-check">
-                    <Icon name="check" size={14} />
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="channel-empty-note">
-            <Icon name="bell" size={20} />
+      {showNotificationChannels ? (
+        <section className="form-section">
+          <div className="form-section-heading">
+            <span className="section-number">03</span>
             <div>
-              <strong>등록된 알림 채널이 없습니다</strong>
-              <p>모니터를 먼저 만든 뒤 알림 채널 화면에서 연결할 수 있습니다.</p>
+              <h2>알림 채널</h2>
+              <p>장애와 복구 메시지를 받을 채널을 선택하세요.</p>
             </div>
           </div>
-        )}
-        {errors.channelIds ? <span className="field-error">{errors.channelIds}</span> : null}
-      </section>
+          {channels.length ? (
+            <div className="channel-select-grid">
+              {channels.map((channel) => {
+                const checked = value.channelIds.includes(channel.id);
+                return (
+                  <label
+                    className={`channel-choice${checked ? ' channel-choice-selected' : ''}`}
+                    key={channel.id}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) => {
+                        const channelIds = event.target.checked
+                          ? [...value.channelIds, channel.id]
+                          : value.channelIds.filter((id) => id !== channel.id);
+                        patchValue({ channelIds });
+                      }}
+                    />
+                    <span className={`channel-icon channel-${channel.type.toLowerCase()}`}>
+                      <Icon name="telegram" size={19} />
+                    </span>
+                    <span>
+                      <strong>{channel.displayName}</strong>
+                      <small>{channel.chatId ?? 'Chat ID를 불러올 수 없음'}</small>
+                    </span>
+                    <span className="choice-check">
+                      <Icon name="check" size={14} />
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="channel-empty-note">
+              <Icon name="bell" size={20} />
+              <div>
+                <strong>등록된 알림 채널이 없습니다</strong>
+                <p>모니터를 먼저 만든 뒤 알림 채널 화면에서 연결할 수 있습니다.</p>
+              </div>
+            </div>
+          )}
+          {errors.channelIds ? <span className="field-error">{errors.channelIds}</span> : null}
+        </section>
+      ) : null}
 
       <details
         className="advanced-settings"
