@@ -250,6 +250,9 @@ export default function MonitorDetailPage() {
             >
               {monitor.displayUrl ?? monitor.url} <Icon name="external" size={13} />
             </a>
+            <span className="detail-owner">
+              등록 계정: <strong>{monitor.owner?.username ?? '소유자 미지정'}</strong>
+            </span>
           </div>
         </div>
         <div className="page-header-actions detail-actions">
@@ -266,54 +269,60 @@ export default function MonitorDetailPage() {
             )}{' '}
             즉시 검사
           </button>
-          <button
-            type="button"
-            className="button button-secondary"
-            onClick={() => void toggleLifecycle()}
-            disabled={action !== null}
-          >
-            {action === 'lifecycle' ? (
-              <span className="spinner spinner-button" />
-            ) : (
-              <Icon name={monitor.lifecycleStatus === 'ACTIVE' ? 'pause' : 'play'} size={16} />
-            )}
-            {monitor.lifecycleStatus === 'ACTIVE' ? '일시 중지' : '재개'}
-          </button>
-          <button
-            type="button"
-            className="button button-danger-ghost"
-            onClick={() => void removeMonitor()}
-            disabled={action !== null}
-          >
-            {action === 'delete' ? (
-              <span className="spinner spinner-button" />
-            ) : (
-              <Icon name="trash" size={16} />
-            )}{' '}
-            삭제
-          </button>
+          {monitor.canManage ? (
+            <>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => void toggleLifecycle()}
+                disabled={action !== null}
+              >
+                {action === 'lifecycle' ? (
+                  <span className="spinner spinner-button" />
+                ) : (
+                  <Icon name={monitor.lifecycleStatus === 'ACTIVE' ? 'pause' : 'play'} size={16} />
+                )}
+                {monitor.lifecycleStatus === 'ACTIVE' ? '일시 중지' : '재개'}
+              </button>
+              <button
+                type="button"
+                className="button button-danger-ghost"
+                onClick={() => void removeMonitor()}
+                disabled={action !== null}
+              >
+                {action === 'delete' ? (
+                  <span className="spinner spinner-button" />
+                ) : (
+                  <Icon name="trash" size={16} />
+                )}{' '}
+                삭제
+              </button>
+            </>
+          ) : null}
         </div>
       </header>
 
       <div className="tabs" role="tablist" aria-label="모니터 상세 메뉴">
-        {tabs.map((tab) => (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.value}
-            className={activeTab === tab.value ? 'tab-active' : ''}
-            onClick={() => setActiveTab(tab.value)}
-            key={tab.value}
-          >
-            {tab.label}
-            {tab.value === 'incidents' &&
-            incidents.filter((incident) => incident.status === 'OPEN').length ? (
-              <span className="tab-count">
-                {incidents.filter((incident) => incident.status === 'OPEN').length}
-              </span>
-            ) : null}
-          </button>
-        ))}
+        {tabs
+          .filter((tab) => tab.value !== 'settings' || monitor.canManage)
+          .map((tab) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.value}
+              className={activeTab === tab.value ? 'tab-active' : ''}
+              onClick={() => setActiveTab(tab.value)}
+              key={tab.value}
+            >
+              {tab.label}
+              {tab.value === 'incidents' &&
+              incidents.filter((incident) => incident.status === 'OPEN').length ? (
+                <span className="tab-count">
+                  {incidents.filter((incident) => incident.status === 'OPEN').length}
+                </span>
+              ) : null}
+            </button>
+          ))}
       </div>
 
       {activeTab === 'overview' ? (
@@ -386,7 +395,7 @@ export default function MonitorDetailPage() {
         </section>
       ) : null}
 
-      {activeTab === 'settings' ? (
+      {activeTab === 'settings' && monitor.canManage ? (
         <div className="settings-tab">
           {saveError ? <InlineNotice tone="error">{saveError}</InlineNotice> : null}
           <MonitorForm
@@ -519,14 +528,16 @@ function OverviewTab({
         <section className="content-card config-summary-card">
           <div className="card-header">
             <h2>검사 설정</h2>
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="설정 수정"
-              onClick={() => onOpenTab('settings')}
-            >
-              <Icon name="edit" size={16} />
-            </button>
+            {monitor.canManage ? (
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="설정 수정"
+                onClick={() => onOpenTab('settings')}
+              >
+                <Icon name="edit" size={16} />
+              </button>
+            ) : null}
           </div>
           <dl className="config-list">
             <div>

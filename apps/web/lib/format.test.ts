@@ -6,6 +6,8 @@ import type { Monitor } from './types';
 function monitor(healthState: Monitor['healthState']): Monitor {
   return {
     id: 'monitor-1',
+    owner: { id: 'owner-1', username: 'owner' },
+    canManage: true,
     name: '서비스',
     url: 'https://example.com',
     method: 'GET',

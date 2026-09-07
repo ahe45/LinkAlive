@@ -9,8 +9,10 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import { z } from 'zod';
+import type { AuthenticatedRequest } from '../auth/auth.types.js';
 import { parseInput, parseLimit } from '../common/validation.js';
 import { monitorInputSchema, monitorPatchSchema } from './monitor.schemas.js';
 import { MonitorsService } from './monitors.service.js';
@@ -33,6 +35,7 @@ export class MonitorsController {
 
   @Get()
   list(
+    @Req() request: AuthenticatedRequest,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
     @Query('state') rawState?: string,
@@ -40,48 +43,52 @@ export class MonitorsController {
   ) {
     const state = rawState === undefined ? undefined : parseInput(listStateSchema, rawState);
     const query = rawQuery === undefined ? undefined : parseInput(listQuerySchema, rawQuery);
-    return this.monitors.list(cursor, parseLimit(limit), state, query);
+    return this.monitors.list(cursor, parseLimit(limit), request.user, state, query);
   }
 
   @Post('test')
-  test(@Body() body: unknown) {
-    return this.monitors.test(parseInput(monitorInputSchema, body));
+  test(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return this.monitors.test(parseInput(monitorInputSchema, body), request.user);
   }
 
   @Post()
-  create(@Body() body: unknown) {
-    return this.monitors.create(parseInput(monitorInputSchema, body));
+  create(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return this.monitors.create(parseInput(monitorInputSchema, body), request.user);
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.monitors.get(parseInput(idSchema, id));
+  get(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return this.monitors.get(parseInput(idSchema, id), request.user);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: unknown) {
-    return this.monitors.update(parseInput(idSchema, id), parseInput(monitorPatchSchema, body));
+  update(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return this.monitors.update(
+      parseInput(idSchema, id),
+      parseInput(monitorPatchSchema, body),
+      request.user,
+    );
   }
 
   @Delete(':id')
   @HttpCode(204)
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.monitors.remove(parseInput(idSchema, id));
+  async remove(@Param('id') id: string, @Req() request: AuthenticatedRequest): Promise<void> {
+    await this.monitors.remove(parseInput(idSchema, id), request.user);
   }
 
   @Post(':id/pause')
-  pause(@Param('id') id: string) {
-    return this.monitors.pause(parseInput(idSchema, id));
+  pause(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return this.monitors.pause(parseInput(idSchema, id), request.user);
   }
 
   @Post(':id/resume')
-  resume(@Param('id') id: string) {
-    return this.monitors.resume(parseInput(idSchema, id));
+  resume(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return this.monitors.resume(parseInput(idSchema, id), request.user);
   }
 
   @Post(':id/check-now')
-  checkNow(@Param('id') id: string) {
-    return this.monitors.checkNow(parseInput(idSchema, id));
+  checkNow(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return this.monitors.checkNow(parseInput(idSchema, id), request.user);
   }
 
   @Get(':id/checks')

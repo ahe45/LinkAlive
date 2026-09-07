@@ -1,12 +1,15 @@
 import type { Prisma } from '@linkalive/database';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
+import { canManageMonitor } from './monitor.permissions.js';
 
 export const monitorInclude = {
   channels: { select: { channelId: true } },
+  owner: { select: { id: true, username: true } },
 } satisfies Prisma.MonitorInclude;
 
 export type MonitorRecord = Prisma.MonitorGetPayload<{ include: typeof monitorInclude }>;
 
-export function toMonitorView(monitor: MonitorRecord) {
+export function toMonitorView(monitor: MonitorRecord, actor: AuthenticatedUser) {
   return {
     id: monitor.id,
     name: monitor.name,
@@ -35,6 +38,8 @@ export function toMonitorView(monitor: MonitorRecord) {
     lastErrorMessage: null,
     configVersion: monitor.configVersion,
     channelIds: monitor.channels.map(({ channelId }) => channelId),
+    owner: monitor.owner,
+    canManage: canManageMonitor(monitor.ownerAccountId, actor),
     createdAt: monitor.createdAt,
     updatedAt: monitor.updatedAt,
   };

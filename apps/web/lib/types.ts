@@ -26,6 +26,8 @@ export type ErrorType =
 
 export interface Monitor {
   id: string;
+  owner: { id: string; username: string } | null;
+  canManage: boolean;
   name: string;
   /** API는 query 값이 마스킹된 안전한 URL만 반환합니다. */
   url: string;

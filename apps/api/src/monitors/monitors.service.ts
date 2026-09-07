@@ -27,12 +27,14 @@ import {
   resolveSafeDestination,
   UrlPolicyError,
 } from '@linkalive/monitoring';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { getConfig } from '../common/config.js';
 import { decryptString, encryptString } from '../common/crypto.js';
 import { toDisplayUrl } from '../common/display.js';
 import { getRedis } from '../common/redis.js';
 import { parseInput } from '../common/validation.js';
 import { monitorInputSchema, type MonitorInput, type MonitorPatch } from './monitor.schemas.js';
+import { assertCanManageMonitor } from './monitor.permissions.js';
 import {
   monitorInclude,
   toCheckResultView,
@@ -305,7 +307,13 @@ async function lockMonitor(
 
 @Injectable()
 export class MonitorsService {
-  async list(cursor: string | undefined, limit: number, state?: MonitorListState, query?: string) {
+  async list(
+    cursor: string | undefined,
+    limit: number,
+    actor: AuthenticatedUser,
+    state?: MonitorListState,
+    query?: string,
+  ) {
     if (state === 'STALE') {
       const now = new Date();
       const candidates = await prisma.monitor.findMany({
@@ -337,7 +345,7 @@ export class MonitorsService {
         return record ? [record] : [];
       });
       return {
-        items: items.map(toMonitorView),
+        items: items.map((monitor) => toMonitorView(monitor, actor)),
         nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
       };
     }
@@ -352,21 +360,21 @@ export class MonitorsService {
     const hasMore = records.length > limit;
     const items = hasMore ? records.slice(0, limit) : records;
     return {
-      items: items.map(toMonitorView),
+      items: items.map((monitor) => toMonitorView(monitor, actor)),
       nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
     };
   }
 
-  async get(id: string) {
+  async get(id: string, actor: AuthenticatedUser) {
     const monitor = await prisma.monitor.findFirst({
       where: { id, deletedAt: null },
       include: monitorInclude,
     });
     if (!monitor) throw new NotFoundException('모니터를 찾을 수 없습니다.');
-    return toMonitorView(monitor);
+    return toMonitorView(monitor, actor);
   }
 
-  async create(input: MonitorInput) {
+  async create(input: MonitorInput, actor: AuthenticatedUser) {
     const parsedUrl = await validateTarget(input.url);
     const target = storedTarget(parsedUrl);
     const now = new Date();
@@ -376,6 +384,7 @@ export class MonitorsService {
       const created = await tx.monitor.create({
         data: {
           id,
+          ownerAccountId: actor.id,
           name: input.name,
           requestUrlEncrypted: encryptedBytes(target.requestUrl),
           displayUrl: target.displayUrl,
@@ -403,7 +412,7 @@ export class MonitorsService {
       });
       await tx.auditLog.create({
         data: {
-          actorId: getConfig().adminUsername,
+          actorId: actor.id,
           action: 'MONITOR_CREATED',
           targetType: 'Monitor',
           targetId: created.id,
@@ -411,13 +420,14 @@ export class MonitorsService {
       });
       return created;
     });
-    return toMonitorView(monitor);
+    return toMonitorView(monitor, actor);
   }
 
-  async update(id: string, patch: MonitorPatch) {
+  async update(id: string, patch: MonitorPatch, actor: AuthenticatedUser) {
     const updated = await prisma.$transaction(async (tx) => {
       const current = await lockMonitor(tx, id);
       if (!current) throw new NotFoundException('모니터를 찾을 수 없습니다.');
+      assertCanManageMonitor(current.ownerAccountId, actor);
 
       const currentUrl = decryptedUrl(current.requestUrlEncrypted);
       const requestedUrl = patch.url && patch.url !== current.displayUrl ? patch.url : currentUrl;
@@ -517,7 +527,7 @@ export class MonitorsService {
       });
       await tx.auditLog.create({
         data: {
-          actorId: getConfig().adminUsername,
+          actorId: actor.id,
           action: monitoringChanged ? 'MONITOR_CONFIG_UPDATED' : 'MONITOR_UPDATED',
           targetType: 'Monitor',
           targetId: id,
@@ -525,17 +535,18 @@ export class MonitorsService {
       });
       return record;
     });
-    return toMonitorView(updated);
+    return toMonitorView(updated, actor);
   }
 
-  async pause(id: string) {
-    return this.setLifecycle(id, MonitorLifecycle.PAUSED, IncidentClosureReason.PAUSED);
+  async pause(id: string, actor: AuthenticatedUser) {
+    return this.setLifecycle(id, MonitorLifecycle.PAUSED, IncidentClosureReason.PAUSED, actor);
   }
 
-  async resume(id: string) {
+  async resume(id: string, actor: AuthenticatedUser) {
     const updated = await prisma.$transaction(async (tx) => {
       const current = await lockMonitor(tx, id);
       if (!current) throw new NotFoundException('모니터를 찾을 수 없습니다.');
+      assertCanManageMonitor(current.ownerAccountId, actor);
       if (current.lifecycleStatus === MonitorLifecycle.ACTIVE) return current;
       const now = new Date();
       const record = await tx.monitor.update({
@@ -557,7 +568,7 @@ export class MonitorsService {
       });
       await tx.auditLog.create({
         data: {
-          actorId: getConfig().adminUsername,
+          actorId: actor.id,
           action: 'MONITOR_RESUMED',
           targetType: 'Monitor',
           targetId: id,
@@ -565,13 +576,14 @@ export class MonitorsService {
       });
       return record;
     });
-    return toMonitorView(updated);
+    return toMonitorView(updated, actor);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, actor: AuthenticatedUser): Promise<void> {
     await prisma.$transaction(async (tx) => {
       const current = await lockMonitor(tx, id);
       if (!current) throw new NotFoundException('모니터를 찾을 수 없습니다.');
+      assertCanManageMonitor(current.ownerAccountId, actor);
       const now = new Date();
       await this.cancelRuntime(tx, id, IncidentClosureReason.DELETED, now);
       await tx.monitor.update({
@@ -590,7 +602,7 @@ export class MonitorsService {
       });
       await tx.auditLog.create({
         data: {
-          actorId: getConfig().adminUsername,
+          actorId: actor.id,
           action: 'MONITOR_DELETED',
           targetType: 'Monitor',
           targetId: id,
@@ -599,7 +611,7 @@ export class MonitorsService {
     });
   }
 
-  async checkNow(id: string) {
+  async checkNow(id: string, actor: AuthenticatedUser) {
     const monitor = await prisma.monitor.findFirst({ where: { id, deletedAt: null } });
     if (!monitor) throw new NotFoundException('모니터를 찾을 수 없습니다.');
     return checkRateLimiter.run(`target:${monitor.hostnameNormalized}`, async () => {
@@ -627,7 +639,7 @@ export class MonitorsService {
         });
         await tx.auditLog.create({
           data: {
-            actorId: getConfig().adminUsername,
+            actorId: actor.id,
             action: 'MONITOR_MANUAL_CHECKED',
             targetType: 'Monitor',
             targetId: id,
@@ -640,7 +652,7 @@ export class MonitorsService {
     });
   }
 
-  async test(input: MonitorInput) {
+  async test(input: MonitorInput, actor: AuthenticatedUser) {
     const rateTarget = storedTarget(parseTarget(input.url));
     return checkRateLimiter.run(`target:${rateTarget.hostnameNormalized}`, async () => {
       const parsedUrl = await validateTarget(input.url);
@@ -670,7 +682,7 @@ export class MonitorsService {
         });
         await tx.auditLog.create({
           data: {
-            actorId: getConfig().adminUsername,
+            actorId: actor.id,
             action: 'MONITOR_TEST_EXECUTED',
             targetType: 'CheckResult',
             targetId: created.id,
@@ -763,10 +775,12 @@ export class MonitorsService {
     id: string,
     lifecycleStatus: MonitorLifecycle,
     reason: IncidentClosureReason,
+    actor: AuthenticatedUser,
   ) {
     const updated = await prisma.$transaction(async (tx) => {
       const current = await lockMonitor(tx, id);
       if (!current) throw new NotFoundException('모니터를 찾을 수 없습니다.');
+      assertCanManageMonitor(current.ownerAccountId, actor);
       if (current.lifecycleStatus === lifecycleStatus) return current;
       const now = new Date();
       await this.cancelRuntime(tx, id, reason, now);
@@ -785,15 +799,16 @@ export class MonitorsService {
       });
       await tx.auditLog.create({
         data: {
-          actorId: getConfig().adminUsername,
-          action: 'MONITOR_PAUSED',
+          actorId: actor.id,
+          action:
+            lifecycleStatus === MonitorLifecycle.PAUSED ? 'MONITOR_PAUSED' : 'MONITOR_RESUMED',
           targetType: 'Monitor',
           targetId: id,
         },
       });
       return record;
     });
-    return toMonitorView(updated);
+    return toMonitorView(updated, actor);
   }
 
   private async cancelRuntime(

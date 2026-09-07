@@ -407,19 +407,21 @@ export default function DashboardPage() {
                             <Icon name="refresh" size={17} />
                           )}
                         </button>
-                        <button
-                          type="button"
-                          className="icon-button"
-                          title={monitor.lifecycleStatus === 'ACTIVE' ? '일시 중지' : '재개'}
-                          aria-label={`${monitor.name} ${monitor.lifecycleStatus === 'ACTIVE' ? '일시 중지' : '재개'}`}
-                          onClick={() => void toggleLifecycle(monitor)}
-                          disabled={busy}
-                        >
-                          <Icon
-                            name={monitor.lifecycleStatus === 'ACTIVE' ? 'pause' : 'play'}
-                            size={17}
-                          />
-                        </button>
+                        {monitor.canManage ? (
+                          <button
+                            type="button"
+                            className="icon-button"
+                            title={monitor.lifecycleStatus === 'ACTIVE' ? '일시 중지' : '재개'}
+                            aria-label={`${monitor.name} ${monitor.lifecycleStatus === 'ACTIVE' ? '일시 중지' : '재개'}`}
+                            onClick={() => void toggleLifecycle(monitor)}
+                            disabled={busy}
+                          >
+                            <Icon
+                              name={monitor.lifecycleStatus === 'ACTIVE' ? 'pause' : 'play'}
+                              size={17}
+                            />
+                          </button>
+                        ) : null}
                         <Link
                           className="icon-button"
                           href={`/monitors/${monitor.id}`}

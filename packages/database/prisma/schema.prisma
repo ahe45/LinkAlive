@@ -141,12 +141,15 @@ model Account {
   createdAt    DateTime    @default(now()) @map("created_at") @db.DateTime(3)
   updatedAt    DateTime    @updatedAt @map("updated_at") @db.DateTime(3)
 
+  ownedMonitors Monitor[] @relation("MonitorOwner")
+
   @@index([role, enabled], map: "accounts_role_enabled_idx")
   @@map("accounts")
 }
 
 model Monitor {
   id                          String           @id @default(uuid()) @db.Char(36)
+  ownerAccountId              String?          @map("owner_account_id") @db.Char(36)
   name                        String           @db.VarChar(160)
   requestUrlEncrypted         Bytes            @map("request_url_encrypted") @db.Blob
   displayUrl                  String           @map("display_url") @db.VarChar(2048)
@@ -185,11 +188,13 @@ model Monitor {
   incidents       Incident[]
   channels        MonitorChannel[]
   outboxEvents    NotificationOutbox[]
+  owner           Account?             @relation("MonitorOwner", fields: [ownerAccountId], references: [id], onDelete: SetNull, onUpdate: Restrict)
 
   @@index([lifecycleStatus, nextCheckAt], map: "monitors_due_idx")
   @@index([healthState], map: "monitors_health_idx")
   @@index([hostnameNormalized], map: "monitors_hostname_idx")
   @@index([deletedAt], map: "monitors_deleted_at_idx")
+  @@index([ownerAccountId], map: "monitors_owner_account_idx")
   @@map("monitors")
 }
 

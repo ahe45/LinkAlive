@@ -43,6 +43,7 @@ vi.mock('../src/common/config.js', () => ({
 }));
 
 import {
+  AccountRole,
   IncidentClosureReason,
   IncidentStatus,
   MonitorLifecycle,
@@ -57,6 +58,11 @@ import { NotificationChannelsService } from '../src/notifications/notification-c
 const monitorId = '00000000-0000-4000-8000-000000000001';
 const channelId = '00000000-0000-4000-8000-000000000002';
 const originalChannelConfig = new Uint8Array([7, 8, 9]);
+const administrator = {
+  id: '00000000-0000-4000-8000-000000000003',
+  username: 'test-admin',
+  role: AccountRole.ADMIN,
+};
 const channelRecord = {
   id: channelId,
   type: 'TELEGRAM',
@@ -85,14 +91,14 @@ beforeEach(() => {
     operation(database.tx),
   );
   database.tx.$queryRaw.mockResolvedValue([{ id: monitorId }]);
-  database.tx.monitor.findFirst.mockResolvedValue({ id: monitorId });
+  database.tx.monitor.findFirst.mockResolvedValue({ id: monitorId, ownerAccountId: null });
   database.tx.notificationChannel.findFirst.mockResolvedValue(channelRecord);
   database.tx.notificationChannel.update.mockResolvedValue(channelRecord);
 });
 
 describe('monitor secret lifecycle', () => {
   it('tombstones the URL and terminal outbox snapshots after canceling runtime work', async () => {
-    await new MonitorsService().remove(monitorId);
+    await new MonitorsService().remove(monitorId, administrator);
 
     const lockSql = normalizedSql(database.tx.$queryRaw.mock.calls[0]?.[0]);
     expect(lockSql).toBe('SELECT id FROM monitors WHERE id = ? AND deleted_at IS NULL FOR UPDATE');
