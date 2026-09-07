@@ -154,17 +154,19 @@ CI는 실제 MariaDB·Redis에서 예약 실패→`DOWN`→`RECOVERY` 흐름과 
 docker compose --env-file .env -f infra/compose.yaml -f infra/compose.app.yaml up --build -d
 ```
 
-외부 관리형 MySQL/MariaDB와 Redis를 사용하는 운영 환경에서는 `.env`의 `DATABASE_URL`,
-`REDIS_URL`, `NEXT_PUBLIC_API_BASE_URL`을 실제 주소로 설정한 다음 애플리케이션 전용
-구성을 실행합니다. 이 구성에는 MySQL/MariaDB와 Redis 컨테이너가 포함되지 않습니다.
+외부 관리형 MySQL/MariaDB와 Redis를 사용하는 운영 환경에서는 `.env`의 `DATABASE_URL`과
+`REDIS_URL`을 실제 주소로 설정한 다음 애플리케이션 전용 구성을 실행합니다. 이 구성에는
+MySQL/MariaDB와 Redis 컨테이너가 포함되지 않습니다.
 
 ```powershell
 docker compose --env-file .env -f infra/compose.prod.yaml up --build -d
 ```
 
-`NEXT_PUBLIC_API_BASE_URL`은 사용자의 브라우저에서 접근 가능한 HTTPS API 주소여야 하며,
-이미지를 빌드하기 전에 설정해야 합니다. API는 컨테이너 내부에서 항상 4000번 포트를
-사용하고, scheduler와 worker는 각각 4101, 4102번 포트로 상태를 제공합니다.
+`NEXT_PUBLIC_API_BASE_URL`은 기본값 `/linkalive-api`를 사용하면 Next.js 동일 출처 프록시를
+통해 API에 연결됩니다. 웹과 API를 서로 다른 공개 도메인으로 분리하는 경우에만 사용자의
+브라우저에서 접근 가능한 HTTPS API 주소로 바꾸고 이미지를 다시 빌드해야 합니다. API는
+컨테이너 내부에서 항상 4000번 포트를 사용하고, scheduler와 worker는 각각 4101, 4102번
+포트로 상태를 제공합니다.
 
 | 프로세스  | 상태 확인                       | 의미                                      |
 | --------- | ------------------------------- | ----------------------------------------- |

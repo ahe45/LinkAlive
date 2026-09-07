@@ -18,10 +18,7 @@ import type {
   NotificationChannelPatch,
 } from '@/lib/types';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000').replace(
-  /\/$/,
-  '',
-);
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '/linkalive-api').replace(/\/$/, '');
 const API_REQUEST_TIMEOUT_MS = 10_000;
 
 interface ApiErrorBody {
