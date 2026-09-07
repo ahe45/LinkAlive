@@ -3302,11 +3302,33 @@ svg {
   }
 }
 
-/* Main content typography is intentionally 50% larger than the compact
-   navigation chrome. Keep these overrides scoped so the sidebar and login
-   screen retain their existing proportions. */
+/* Application typography is 30% larger while the login screen retains its
+   original proportions. */
 .main-content {
-  font-size: 21px;
+  font-size: 18.2px;
+}
+
+.sidebar .brand-wordmark {
+  font-size: 24.7px;
+}
+
+.sidebar .nav-eyebrow,
+.sidebar .sidebar-security p,
+.sidebar .user-info span {
+  font-size: 13px;
+}
+
+.sidebar .sidebar-security strong {
+  font-size: 14.3px;
+}
+
+.sidebar .user-avatar,
+.sidebar .user-info strong {
+  font-size: 15.6px;
+}
+
+.sidebar .nav-link {
+  font-size: 16.9px;
 }
 
 .main-content .page-eyebrow,
@@ -3334,7 +3356,7 @@ svg {
 .main-content .account-status,
 .main-content .account-identity small,
 .main-content .session-account small {
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .main-content .breadcrumbs,
@@ -3357,7 +3379,7 @@ svg {
 .main-content .latest-success strong,
 .main-content .account-table-header,
 .main-content .session-table-header {
-  font-size: 16.5px;
+  font-size: 14.3px;
 }
 
 .main-content .text-button,
@@ -3372,7 +3394,7 @@ svg {
 .main-content .account-row,
 .main-content .session-row,
 .main-content .import-errors p {
-  font-size: 18px;
+  font-size: 15.6px;
 }
 
 .main-content .button,
@@ -3385,11 +3407,11 @@ svg {
 .main-content .account-identity strong,
 .main-content .session-account strong,
 .main-content .import-success {
-  font-size: 19.5px;
+  font-size: 16.9px;
 }
 
 .main-content .button.button-small {
-  font-size: 18px;
+  font-size: 15.6px;
 }
 
 .main-content .field-label em,
@@ -3412,7 +3434,7 @@ svg {
 .main-content .incident-notification strong,
 .main-content .notification-guide small,
 .main-content .channel-config-list dd {
-  font-size: 13.5px;
+  font-size: 11.7px;
 }
 
 .main-content .detail-metrics-grid small,
@@ -3426,48 +3448,54 @@ svg {
 .main-content .verification-badge,
 .main-content .monitor-row > div[data-label]::before,
 .main-content .history-row > span::before {
-  font-size: 12px;
+  font-size: 10.4px;
 }
 
 .main-content .connection-error h1 {
-  font-size: 30px;
+  font-size: 26px;
 }
 
 .main-content .page-header h1 {
-  font-size: clamp(37.5px, 3.3vw, 46.5px);
+  font-size: clamp(32.5px, 2.86vw, 40.3px);
 }
 
 .main-content .card-header h2,
 .main-content .empty-state h3 {
-  font-size: 22.5px;
+  font-size: 19.5px;
 }
 
 .main-content .summary-value {
-  font-size: 43.5px;
+  font-size: 37.7px;
 }
 
 .main-content .form-section-heading h2 {
-  font-size: 24px;
+  font-size: 20.8px;
 }
 
 .main-content .advanced-settings-heading h3 {
-  font-size: 21px;
+  font-size: 18.2px;
 }
 
 .main-content .detail-title-line h1 {
-  font-size: 36px;
+  font-size: 31.2px;
 }
 
 .main-content .detail-owner {
-  font-size: 1.17rem;
+  font-size: 1.014rem;
 }
 
 .main-content .detail-metrics-grid strong {
-  font-size: 27px;
+  font-size: 23.4px;
 }
 
 @media (max-width: 740px) {
   .main-content .summary-value {
-    font-size: 37.5px;
+    font-size: 32.5px;
+  }
+}
+
+@media (max-width: 860px) {
+  .mobile-header .brand-wordmark {
+    font-size: 20.8px;
   }
 }
