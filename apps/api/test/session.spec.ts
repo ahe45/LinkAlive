@@ -5,13 +5,18 @@ describe('session token', () => {
   const secret = 'a'.repeat(32);
 
   it('round trips a valid token', () => {
-    const token = createSessionToken('admin', secret, 60);
-    expect(verifySessionToken(token, secret)?.sub).toBe('admin');
+    const token = createSessionToken('admin', 'session-id', secret, 60);
+    expect(verifySessionToken(token, secret)).toMatchObject({ sub: 'admin', sid: 'session-id' });
   });
 
   it('rejects tampering', () => {
-    const token = createSessionToken('admin', secret, 60);
+    const token = createSessionToken('admin', 'session-id', secret, 60);
     expect(verifySessionToken(`${token}x`, secret)).toBeNull();
+  });
+
+  it('rejects an expired token', () => {
+    const token = createSessionToken('admin', 'session-id', secret, -1);
+    expect(verifySessionToken(token, secret)).toBeNull();
   });
 
   it('compares secrets without a length side channel', () => {

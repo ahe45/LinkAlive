@@ -141,10 +141,28 @@ model Account {
   createdAt    DateTime    @default(now()) @map("created_at") @db.DateTime(3)
   updatedAt    DateTime    @updatedAt @map("updated_at") @db.DateTime(3)
 
-  ownedMonitors Monitor[] @relation("MonitorOwner")
+  ownedMonitors Monitor[]      @relation("MonitorOwner")
+  loginSessions LoginSession[]
 
   @@index([role, enabled], map: "accounts_role_enabled_idx")
   @@map("accounts")
+}
+
+model LoginSession {
+  id         String    @id @default(uuid()) @db.Char(36)
+  accountId  String    @map("account_id") @db.Char(36)
+  ipAddress  String?   @map("ip_address") @db.VarChar(45)
+  userAgent  String?   @map("user_agent") @db.VarChar(512)
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at") @db.DateTime(3)
+  expiresAt  DateTime  @map("expires_at") @db.DateTime(3)
+  revokedAt  DateTime? @map("revoked_at") @db.DateTime(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([accountId, revokedAt, expiresAt], map: "login_sessions_account_active_idx")
+  @@index([revokedAt, expiresAt], map: "login_sessions_active_idx")
+  @@map("login_sessions")
 }
 
 model Monitor {

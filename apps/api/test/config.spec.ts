@@ -51,6 +51,21 @@ describe('API configuration safety', () => {
     ]);
   });
 
+  it('defaults to a 30 minute idle timeout and an 8 hour absolute timeout', () => {
+    delete process.env.SESSION_IDLE_TIMEOUT_MINUTES;
+    delete process.env.SESSION_ABSOLUTE_TIMEOUT_HOURS;
+    expect(getConfig()).toMatchObject({
+      sessionIdleTimeoutMinutes: 30,
+      sessionAbsoluteTimeoutHours: 8,
+    });
+  });
+
+  it('rejects an idle timeout longer than the absolute timeout', () => {
+    process.env.SESSION_IDLE_TIMEOUT_MINUTES = '121';
+    process.env.SESSION_ABSOLUTE_TIMEOUT_HOURS = '2';
+    expect(() => getConfig()).toThrow(/SESSION_IDLE_TIMEOUT_MINUTES/);
+  });
+
   it.each(['https://example.com/path', 'https://user:password@example.com', 'file:///tmp/ui'])(
     'rejects a value that is not a bare web origin: %s',
     (origin) => {

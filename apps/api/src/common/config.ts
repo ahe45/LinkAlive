@@ -22,6 +22,8 @@ const schema = z.object({
   AUTH_SECRET: z.string().min(32),
   AUTH_COOKIE_NAME: z.string().min(1).default('linkalive_session'),
   COOKIE_SECURE: booleanFromString,
+  SESSION_IDLE_TIMEOUT_MINUTES: z.coerce.number().int().min(5).max(1_440).default(30),
+  SESSION_ABSOLUTE_TIMEOUT_HOURS: z.coerce.number().int().min(1).max(168).default(8),
   ENCRYPTION_KEY: z.string().min(1),
   CHECK_QUEUE_NAME: z.string().default('linkalive-checks'),
   NOTIFICATION_QUEUE_NAME: z.string().default('linkalive-notifications'),
@@ -49,6 +51,8 @@ export type ApiConfig = {
   authSecret: string;
   authCookieName: string;
   cookieSecure: boolean;
+  sessionIdleTimeoutMinutes: number;
+  sessionAbsoluteTimeoutHours: number;
   encryptionKey: Buffer;
   checkQueueName: string;
   notificationQueueName: string;
@@ -67,6 +71,9 @@ export function getConfig(): ApiConfig {
   if (cached) return cached;
 
   const parsed = schema.parse(process.env);
+  if (parsed.SESSION_IDLE_TIMEOUT_MINUTES > parsed.SESSION_ABSOLUTE_TIMEOUT_HOURS * 60) {
+    throw new Error('SESSION_IDLE_TIMEOUT_MINUTES must not exceed the absolute session timeout');
+  }
   if (parsed.AUTH_SECRET === 'replace-with-at-least-32-random-characters') {
     throw new Error('AUTH_SECRET must be changed from the example value');
   }
@@ -103,6 +110,8 @@ export function getConfig(): ApiConfig {
     authSecret: parsed.AUTH_SECRET,
     authCookieName: parsed.AUTH_COOKIE_NAME,
     cookieSecure: parsed.COOKIE_SECURE,
+    sessionIdleTimeoutMinutes: parsed.SESSION_IDLE_TIMEOUT_MINUTES,
+    sessionAbsoluteTimeoutHours: parsed.SESSION_ABSOLUTE_TIMEOUT_HOURS,
     encryptionKey,
     checkQueueName: parsed.CHECK_QUEUE_NAME,
     notificationQueueName: parsed.NOTIFICATION_QUEUE_NAME,

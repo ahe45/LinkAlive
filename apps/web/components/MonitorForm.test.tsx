@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { MonitorForm } from './MonitorForm';
 
 describe('MonitorForm', () => {
-  it('shows the basic fields and hides notification channels for a regular user', () => {
+  it('can hide notification channels when explicitly requested', () => {
     const markup = renderToStaticMarkup(
       <MonitorForm mode="create" showNotificationChannels={false} onSubmit={async () => {}} />,
     );
@@ -13,7 +13,7 @@ describe('MonitorForm', () => {
     expect(markup).not.toContain('알림 채널');
   });
 
-  it('shows notification channels for an administrator', () => {
+  it('shows notification channels by default', () => {
     const markup = renderToStaticMarkup(
       <MonitorForm mode="create" showNotificationChannels onSubmit={async () => {}} />,
     );

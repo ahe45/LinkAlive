@@ -339,7 +339,7 @@ export function MonitorForm({
                     </span>
                     <span>
                       <strong>{channel.displayName}</strong>
-                      <small>{channel.chatId ?? 'Chat ID를 불러올 수 없음'}</small>
+                      <small>{channel.chatId ?? 'Telegram 알림 채널'}</small>
                     </span>
                     <span className="choice-check">
                       <Icon name="check" size={14} />
@@ -353,7 +353,7 @@ export function MonitorForm({
               <Icon name="bell" size={20} />
               <div>
                 <strong>등록된 알림 채널이 없습니다</strong>
-                <p>모니터를 먼저 만든 뒤 알림 채널 화면에서 연결할 수 있습니다.</p>
+                <p>관리자가 알림 채널을 등록하고 활성화하면 여기에서 선택할 수 있습니다.</p>
               </div>
             </div>
           )}

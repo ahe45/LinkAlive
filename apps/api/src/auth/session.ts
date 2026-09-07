@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 export interface SessionPayload {
   sub: string;
+  sid: string;
   iat: number;
   exp: number;
 }
@@ -12,12 +13,18 @@ function signature(payload: string, secret: string): Buffer {
 
 export function createSessionToken(
   accountId: string,
+  sessionId: string,
   secret: string,
   ttlSeconds = 8 * 60 * 60,
 ): string {
   const now = Math.floor(Date.now() / 1000);
   const encoded = Buffer.from(
-    JSON.stringify({ sub: accountId, iat: now, exp: now + ttlSeconds } satisfies SessionPayload),
+    JSON.stringify({
+      sub: accountId,
+      sid: sessionId,
+      iat: now,
+      exp: now + ttlSeconds,
+    } satisfies SessionPayload),
   ).toString('base64url');
   return `${encoded}.${signature(encoded, secret).toString('base64url')}`;
 }
@@ -37,6 +44,7 @@ export function verifySessionToken(token: string, secret: string): SessionPayloa
     ) as SessionPayload;
     if (
       !payload.sub ||
+      !payload.sid ||
       !Number.isInteger(payload.exp) ||
       payload.exp <= Math.floor(Date.now() / 1000)
     ) {

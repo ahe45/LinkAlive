@@ -7,4 +7,7 @@ export interface AuthenticatedUser {
   role: AccountRole;
 }
 
-export type AuthenticatedRequest = FastifyRequest & { user: AuthenticatedUser };
+export type AuthenticatedRequest = FastifyRequest & {
+  user: AuthenticatedUser;
+  sessionId: string;
+};

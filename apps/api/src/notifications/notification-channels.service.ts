@@ -91,6 +91,23 @@ function channelView(channel: {
 
 @Injectable()
 export class NotificationChannelsService {
+  async available() {
+    const channels = await prisma.notificationChannel.findMany({
+      where: { deletedAt: null, type: 'TELEGRAM', enabled: true },
+      select: {
+        id: true,
+        type: true,
+        displayName: true,
+        enabled: true,
+        verifiedAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: [{ displayName: 'asc' }, { id: 'asc' }],
+    });
+    return { items: channels, nextCursor: null };
+  }
+
   async list(cursor: string | undefined, limit: number) {
     const rows = await prisma.notificationChannel.findMany({
       where: { deletedAt: null, type: 'TELEGRAM' },

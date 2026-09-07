@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { authApi } from '@/lib/api';
-import type { AuthUser } from '@/lib/types';
+import type { AuthUser, SessionPolicy } from '@/lib/types';
 
 const navigation = [
   { href: '/dashboard', label: '대시보드', icon: 'activity' as const },
@@ -24,9 +24,11 @@ export function useAuthUser(): AuthUser {
 export function AppShell({
   children,
   initialUser,
+  sessionPolicy,
 }: {
   children: React.ReactNode;
   initialUser: AuthUser;
+  sessionPolicy: SessionPolicy;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -37,7 +39,7 @@ export function AppShell({
     setMobileOpen(false);
   }, [pathname]);
 
-  async function logout() {
+  const logout = useCallback(async () => {
     setLoggingOut(true);
     try {
       await authApi.logout();
@@ -46,7 +48,58 @@ export function AppShell({
       router.refresh();
       setLoggingOut(false);
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    const idleTimeoutMs = sessionPolicy.idleTimeoutMinutes * 60_000;
+    const heartbeatMs = Math.min(5 * 60_000, Math.max(60_000, idleTimeoutMs / 2));
+    let lastActivityAt = Date.now();
+    let lastHeartbeatAt = Date.now();
+    let idleTimer: number;
+    let ending = false;
+
+    const endIdleSession = () => {
+      if (ending) return;
+      ending = true;
+      void logout();
+    };
+    const scheduleIdleEnd = () => {
+      window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(endIdleSession, idleTimeoutMs);
+    };
+    const keepSessionAlive = () => {
+      lastHeartbeatAt = Date.now();
+      void authApi.me().catch(() => undefined);
+    };
+    const recordActivity = () => {
+      lastActivityAt = Date.now();
+      scheduleIdleEnd();
+      if (lastActivityAt - lastHeartbeatAt >= heartbeatMs) keepSessionAlive();
+    };
+    const recordVisibleActivity = () => {
+      if (document.visibilityState === 'visible') recordActivity();
+    };
+
+    const activityEvents: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'scroll'];
+    activityEvents.forEach((eventName) =>
+      window.addEventListener(eventName, recordActivity, { passive: true }),
+    );
+    document.addEventListener('visibilitychange', recordVisibleActivity);
+    scheduleIdleEnd();
+
+    const heartbeat = window.setInterval(() => {
+      if (Date.now() - lastActivityAt <= heartbeatMs) {
+        keepSessionAlive();
+      }
+    }, heartbeatMs);
+
+    return () => {
+      window.clearTimeout(idleTimer);
+      window.clearInterval(heartbeat);
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, recordActivity));
+      document.removeEventListener('visibilitychange', recordVisibleActivity);
+    };
+  }, [logout, sessionPolicy.idleTimeoutMinutes]);
 
   return (
     <AuthUserContext.Provider value={initialUser}>

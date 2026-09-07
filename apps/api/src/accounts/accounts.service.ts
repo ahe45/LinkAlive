@@ -201,6 +201,12 @@ export class AccountsService {
             ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
           },
         });
+        if (passwordHash !== undefined || (current.enabled && !updated.enabled)) {
+          await tx.loginSession.updateMany({
+            where: { accountId: id, revokedAt: null },
+            data: { revokedAt: new Date() },
+          });
+        }
         await tx.auditLog.create({
           data: {
             actorId,

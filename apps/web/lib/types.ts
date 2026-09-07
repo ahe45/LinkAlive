@@ -192,6 +192,25 @@ export interface AuthUser {
 
 export interface AuthResponse {
   user: AuthUser;
+  sessionPolicy: SessionPolicy;
+}
+
+export interface SessionPolicy {
+  idleTimeoutMinutes: number;
+  absoluteTimeoutHours: number;
+}
+
+export interface LoginSession {
+  id: string;
+  accountId: string;
+  username: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  idleExpiresAt: string;
+  current: boolean;
 }
 
 export interface Account {

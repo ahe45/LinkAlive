@@ -9,6 +9,10 @@ const INTERNAL_API_BASE_URL = (
 ).replace(/\/$/, '');
 
 export async function requireAuthenticatedUser(): Promise<AuthUser> {
+  return (await requireAuthenticatedSession()).user;
+}
+
+export async function requireAuthenticatedSession(): Promise<AuthResponse> {
   const sessionToken = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
   if (!sessionToken) redirect('/login');
 
@@ -20,7 +24,7 @@ export async function requireAuthenticatedUser(): Promise<AuthUser> {
   if (response.status === 401) redirect('/login');
   if (!response.ok) throw new Error(`Session verification failed with status ${response.status}`);
 
-  return ((await response.json()) as AuthResponse).user;
+  return (await response.json()) as AuthResponse;
 }
 
 export async function requireAdminUser(): Promise<AuthUser> {

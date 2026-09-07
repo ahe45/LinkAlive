@@ -10,6 +10,7 @@ import type {
   DashboardSummary,
   EffectiveHealthState,
   Incident,
+  LoginSession,
   Monitor,
   MonitorInput,
   NotificationChannel,
@@ -137,6 +138,15 @@ export const accountsApi = {
     apiFetch<void>(`/api/v1/accounts/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };
 
+export const sessionsApi = {
+  list: () => apiFetch<{ items: LoginSession[] }>('/api/v1/sessions'),
+  revoke: (id: string) =>
+    apiFetch<{ revoked: number }>(`/api/v1/sessions/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+  revokeAll: () => apiFetch<{ revoked: number }>('/api/v1/sessions/revoke-all', { method: 'POST' }),
+};
+
 export const dashboardApi = {
   summary: () => apiFetch<DashboardSummary>('/api/v1/dashboard/summary'),
 };
@@ -203,6 +213,8 @@ export const monitorsApi = {
 };
 
 export const notificationChannelsApi = {
+  available: () =>
+    apiFetch<CursorPage<NotificationChannel>>('/api/v1/notification-channels/available'),
   list: (cursor?: string) =>
     apiFetch<CursorPage<NotificationChannel>>(
       `/api/v1/notification-channels${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`,

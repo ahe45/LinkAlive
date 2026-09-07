@@ -7,17 +7,21 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AccountRole, prisma } from '@linkalive/database';
+import { AccountRole } from '@linkalive/database';
 import type { FastifyRequest } from 'fastify';
 import { getConfig } from '../common/config.js';
 import { ADMIN_ONLY } from './admin-only.decorator.js';
 import type { AuthenticatedRequest } from './auth.types.js';
 import { IS_PUBLIC_ROUTE } from './public.decorator.js';
 import { verifySessionToken } from './session.js';
+import { SessionsService } from './sessions.service.js';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
+  constructor(
+    @Inject(Reflector) private readonly reflector: Reflector,
+    @Inject(SessionsService) private readonly sessions: SessionsService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_ROUTE, [
@@ -32,11 +36,8 @@ export class AuthGuard implements CanActivate {
     const payload = token ? verifySessionToken(token, config.authSecret) : null;
     if (!payload) throw new UnauthorizedException('로그인이 필요합니다.');
 
-    const account = await prisma.account.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, username: true, role: true, enabled: true },
-    });
-    if (!account?.enabled) throw new UnauthorizedException('로그인이 필요합니다.');
+    const account = await this.sessions.authenticate(payload);
+    if (!account) throw new UnauthorizedException('로그인이 필요합니다.');
 
     const adminOnly = this.reflector.getAllAndOverride<boolean>(ADMIN_ONLY, [
       context.getHandler(),
@@ -58,6 +59,7 @@ export class AuthGuard implements CanActivate {
       username: account.username,
       role: account.role,
     };
+    (request as AuthenticatedRequest).sessionId = payload.sid;
     return true;
   }
 }

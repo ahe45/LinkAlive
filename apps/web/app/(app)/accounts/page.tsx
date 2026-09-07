@@ -7,9 +7,15 @@ import { Icon } from '@/components/Icon';
 import { EmptyState, ErrorPanel, InlineNotice, SectionSkeleton } from '@/components/StateViews';
 import { useToast } from '@/components/ToastProvider';
 import { validateAccountPassword, validateAccountUsername } from '@/lib/account-validation';
-import { accountsApi, getErrorMessage } from '@/lib/api';
+import { accountsApi, getErrorMessage, sessionsApi } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
-import type { Account, AccountBulkResult, AccountInput, AccountPatch } from '@/lib/types';
+import type {
+  Account,
+  AccountBulkResult,
+  AccountInput,
+  AccountPatch,
+  LoginSession,
+} from '@/lib/types';
 
 type FormMode = { type: 'create' } | { type: 'edit'; account: Account } | null;
 type ImportError = AccountBulkResult['errors'][number];
@@ -19,11 +25,14 @@ export default function AccountsPage() {
   const { showToast } = useToast();
   const fileInput = useRef<HTMLInputElement>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [sessions, setSessions] = useState<LoginSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const [revokingAllSessions, setRevokingAllSessions] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<AccountBulkResult | null>(null);
 
@@ -31,7 +40,12 @@ export default function AccountsPage() {
     quiet ? setRefreshing(true) : setLoading(true);
     setError(null);
     try {
-      setAccounts((await accountsApi.list()).items);
+      const [accountResponse, sessionResponse] = await Promise.all([
+        accountsApi.list(),
+        sessionsApi.list(),
+      ]);
+      setAccounts(accountResponse.items);
+      setSessions(sessionResponse.items);
     } catch (loadError) {
       setError(getErrorMessage(loadError));
     } finally {
@@ -55,6 +69,38 @@ export default function AccountsPage() {
       showToast(getErrorMessage(removeError), 'error');
     } finally {
       setPendingId(null);
+    }
+  }
+
+  async function revokeSession(session: LoginSession) {
+    if (!window.confirm(`“${session.username}” 계정의 선택한 로그인 세션을 종료할까요?`)) return;
+    setPendingSessionId(session.id);
+    try {
+      await sessionsApi.revoke(session.id);
+      setSessions((current) => current.filter((item) => item.id !== session.id));
+      showToast('로그인 세션을 종료했습니다.', 'success');
+    } catch (revokeError) {
+      showToast(getErrorMessage(revokeError), 'error');
+    } finally {
+      setPendingSessionId(null);
+    }
+  }
+
+  async function revokeAllSessions() {
+    if (
+      !window.confirm(
+        '현재 로그인한 관리자 세션을 포함한 모든 로그인 세션을 종료할까요? 완료 후 로그인 화면으로 이동합니다.',
+      )
+    ) {
+      return;
+    }
+    setRevokingAllSessions(true);
+    try {
+      await sessionsApi.revokeAll();
+      window.location.assign('/login');
+    } catch (revokeError) {
+      showToast(getErrorMessage(revokeError), 'error');
+      setRevokingAllSessions(false);
     }
   }
 
@@ -368,12 +414,117 @@ export default function AccountsPage() {
         </section>
       )}
 
+      {!error || loading ? (
+        <section className="content-card session-list-card">
+          <div className="card-header">
+            <div>
+              <h2>활성 로그인 세션</h2>
+              <p>
+                {loading
+                  ? '세션을 불러오는 중입니다'
+                  : `현재 사용 가능한 세션 ${sessions.length}개`}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="button button-danger-ghost button-small"
+              onClick={() => void revokeAllSessions()}
+              disabled={loading || sessions.length === 0 || revokingAllSessions}
+            >
+              {revokingAllSessions ? (
+                <span className="spinner spinner-button" />
+              ) : (
+                <Icon name="logout" size={15} />
+              )}{' '}
+              전체 세션 종료
+            </button>
+          </div>
+          {loading ? (
+            <div className="card-body">
+              <SectionSkeleton rows={3} />
+            </div>
+          ) : sessions.length === 0 ? (
+            <EmptyState
+              icon="shield"
+              title="활성 로그인 세션이 없습니다"
+              description="새로 로그인한 세션이 생기면 여기에서 확인하고 종료할 수 있습니다."
+            />
+          ) : (
+            <div className="session-table-wrap">
+              <div className="session-table-header">
+                <span>계정</span>
+                <span>접속 환경</span>
+                <span>최근 활동</span>
+                <span>자동 만료</span>
+                <span>관리</span>
+              </div>
+              {sessions.map((session) => (
+                <article className="session-row" key={session.id}>
+                  <div className="session-account">
+                    <strong>{session.username}</strong>
+                    <small>
+                      {session.current ? '현재 세션' : session.ipAddress || 'IP 정보 없음'}
+                    </small>
+                  </div>
+                  <span className="session-device" title={session.userAgent ?? undefined}>
+                    {sessionDeviceLabel(session.userAgent)}
+                  </span>
+                  <span>{formatDateTime(session.lastSeenAt)}</span>
+                  <span>{formatDateTime(session.idleExpiresAt)}</span>
+                  <div className="account-actions">
+                    <button
+                      type="button"
+                      className="icon-button icon-button-danger"
+                      aria-label={`${session.username} 로그인 세션 종료`}
+                      title={
+                        session.current ? '현재 세션은 로그아웃으로 종료해 주세요.' : '세션 종료'
+                      }
+                      onClick={() => void revokeSession(session)}
+                      disabled={session.current || pendingSessionId === session.id}
+                    >
+                      {pendingSessionId === session.id ? (
+                        <span className="spinner spinner-small" />
+                      ) : (
+                        <Icon name="logout" size={17} />
+                      )}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
       <InlineNotice>
-        비밀번호는 복호화할 수 없는 scrypt 해시로 저장됩니다. 엑셀 파일은 등록 처리 후 서버에
-        보관되지 않습니다.
+        비밀번호는 복호화할 수 없는 scrypt 해시로 저장됩니다. 세션은 30분 동안 활동이 없거나 로그인
+        후 8시간이 지나면 만료됩니다. 엑셀 파일은 등록 처리 후 서버에 보관되지 않습니다.
       </InlineNotice>
     </div>
   );
+}
+
+function sessionDeviceLabel(userAgent?: string | null): string {
+  if (!userAgent) return '알 수 없는 브라우저';
+  const browser = userAgent.includes('Edg/')
+    ? 'Edge'
+    : userAgent.includes('Firefox/')
+      ? 'Firefox'
+      : userAgent.includes('Chrome/')
+        ? 'Chrome'
+        : userAgent.includes('Safari/')
+          ? 'Safari'
+          : '기타 브라우저';
+  const platform = userAgent.includes('Windows')
+    ? 'Windows'
+    : userAgent.includes('Macintosh')
+      ? 'macOS'
+      : userAgent.includes('Android')
+        ? 'Android'
+        : /iPhone|iPad/.test(userAgent)
+          ? 'iOS'
+          : '기타 OS';
+  return `${browser} · ${platform}`;
 }
 
 function AccountForm({
