@@ -1,5 +1,6 @@
 export * from '@prisma/client';
 export { prisma } from './client.js';
+export { hashAccountPassword, verifyAccountPassword } from './account-password.js';
 export {
   DOWN_NOT_DELIVERED_RECOVERY_CANCEL_REASON,
   isSecretTombstone,

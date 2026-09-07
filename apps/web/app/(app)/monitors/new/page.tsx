@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/Icon';
+import { useAuthUser } from '@/components/AppShell';
 import { MonitorForm } from '@/components/MonitorForm';
 import { InlineNotice } from '@/components/StateViews';
 import { useToast } from '@/components/ToastProvider';
@@ -12,6 +13,7 @@ import type { MonitorInput, NotificationChannel } from '@/lib/types';
 
 export default function NewMonitorPage() {
   const router = useRouter();
+  const currentUser = useAuthUser();
   const { showToast } = useToast();
   const [channels, setChannels] = useState<NotificationChannel[]>([]);
   const [channelError, setChannelError] = useState<string | null>(null);
@@ -19,6 +21,11 @@ export default function NewMonitorPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (currentUser.role !== 'ADMIN') {
+      setChannels([]);
+      setChannelError(null);
+      return;
+    }
     notificationChannelsApi
       .list()
       .then((response) => setChannels(response.items.filter((channel) => channel.enabled)))
@@ -29,7 +36,7 @@ export default function NewMonitorPage() {
         }
         setChannelError(getErrorMessage(error));
       });
-  }, [router]);
+  }, [currentUser.role, router]);
 
   async function createMonitor(value: MonitorInput) {
     setSubmitting(true);
@@ -77,6 +84,7 @@ export default function NewMonitorPage() {
       <MonitorForm
         mode="create"
         channels={channels}
+        showNotificationChannels={currentUser.role === 'ADMIN'}
         onSubmit={createMonitor}
         onTest={monitorsApi.test}
         submitting={submitting}

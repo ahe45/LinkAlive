@@ -6,7 +6,12 @@ services:
       target: api
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
-    command: ['pnpm', '--filter', '@linkalive/database', 'prisma:deploy']
+    command:
+      - sh
+      - -c
+      - pnpm --filter @linkalive/database prisma:deploy && node packages/database/dist/bootstrap-admin.js
+    env_file:
+      - ../.env
     environment:
       NODE_ENV: production
       DATABASE_URL: ${CONTAINER_DATABASE_URL:-mysql://linkalive:linkalive@mysql:3306/linkalive}

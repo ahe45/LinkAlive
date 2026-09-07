@@ -25,16 +25,6 @@ describe('API configuration safety', () => {
     resetConfigForTests();
   });
 
-  it('rejects the documented placeholder administrator password', () => {
-    process.env.ADMIN_PASSWORD = 'change-this-before-running';
-    expect(() => getConfig()).toThrow(/ADMIN_PASSWORD/);
-  });
-
-  it('accepts the configured four-character local administrator password', () => {
-    process.env.ADMIN_PASSWORD = '1234';
-    expect(getConfig().adminPassword).toBe('1234');
-  });
-
   it('rejects the documented placeholder session secret', () => {
     process.env.AUTH_SECRET = 'replace-with-at-least-32-random-characters';
     expect(() => getConfig()).toThrow(/AUTH_SECRET/);

@@ -11,13 +11,13 @@ function signature(payload: string, secret: string): Buffer {
 }
 
 export function createSessionToken(
-  username: string,
+  accountId: string,
   secret: string,
   ttlSeconds = 8 * 60 * 60,
 ): string {
   const now = Math.floor(Date.now() / 1000);
   const encoded = Buffer.from(
-    JSON.stringify({ sub: username, iat: now, exp: now + ttlSeconds } satisfies SessionPayload),
+    JSON.stringify({ sub: accountId, iat: now, exp: now + ttlSeconds } satisfies SessionPayload),
   ).toString('base64url');
   return `${encoded}.${signature(encoded, secret).toString('base64url')}`;
 }
@@ -49,7 +49,7 @@ export function verifySessionToken(token: string, secret: string): SessionPayloa
 }
 
 export function safeSecretEqual(left: string, right: string): boolean {
-  const leftHash = createHmac('sha256', 'linkalive-password-compare').update(left).digest();
-  const rightHash = createHmac('sha256', 'linkalive-password-compare').update(right).digest();
+  const leftHash = createHmac('sha256', 'linkalive-secret-compare').update(left).digest();
+  const rightHash = createHmac('sha256', 'linkalive-secret-compare').update(right).digest();
   return timingSafeEqual(leftHash, rightHash);
 }

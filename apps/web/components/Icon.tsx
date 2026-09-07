@@ -9,6 +9,7 @@ export type IconName =
   | 'chevronRight'
   | 'clock'
   | 'close'
+  | 'download'
   | 'edit'
   | 'external'
   | 'globe'
@@ -27,6 +28,7 @@ export type IconName =
   | 'shield'
   | 'telegram'
   | 'trash'
+  | 'upload'
   | 'user'
   | 'x';
 
@@ -92,6 +94,13 @@ export function Icon({ name, size = 18, ...props }: IconProps) {
     close: (
       <>
         <path d="m6 6 12 12M18 6 6 18" />
+      </>
+    ),
+    download: (
+      <>
+        <path d="M12 3v12" />
+        <path d="m7 10 5 5 5-5" />
+        <path d="M5 21h14" />
       </>
     ),
     edit: (
@@ -197,6 +206,13 @@ export function Icon({ name, size = 18, ...props }: IconProps) {
     trash: (
       <>
         <path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6" />
+      </>
+    ),
+    upload: (
+      <>
+        <path d="M12 16V4" />
+        <path d="m7 9 5-5 5 5" />
+        <path d="M5 21h14" />
       </>
     ),
     user: (

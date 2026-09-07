@@ -124,6 +124,27 @@ enum NotificationDeliveryStatus {
   @@map("notification_delivery_status")
 }
 
+enum AccountRole {
+  ADMIN
+  USER
+
+  @@map("account_role")
+}
+
+model Account {
+  id           String      @id @default(uuid()) @db.Char(36)
+  username     String      @unique(map: "accounts_username_key") @db.VarChar(160)
+  passwordHash String      @map("password_hash") @db.VarChar(255)
+  role         AccountRole @default(USER)
+  enabled      Boolean     @default(true)
+  lastLoginAt  DateTime?   @map("last_login_at") @db.DateTime(3)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@index([role, enabled], map: "accounts_role_enabled_idx")
+  @@map("accounts")
+}
+
 model Monitor {
   id                          String           @id @default(uuid()) @db.Char(36)
   name                        String           @db.VarChar(160)
@@ -256,15 +277,15 @@ model Incident {
 }
 
 model NotificationChannel {
-  id              String                  @id @default(uuid()) @db.Char(36)
-  type            String   @db.VarChar(32)
-  displayName     String                  @map("display_name") @db.VarChar(160)
-  encryptedConfig Bytes                   @map("encrypted_config") @db.Blob
-  verifiedAt      DateTime?               @map("verified_at") @db.DateTime(3)
-  enabled         Boolean                 @default(true)
-  createdAt       DateTime                @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt       DateTime                @updatedAt @map("updated_at") @db.DateTime(3)
-  deletedAt       DateTime?               @map("deleted_at") @db.DateTime(3)
+  id              String    @id @default(uuid()) @db.Char(36)
+  type            String    @db.VarChar(32)
+  displayName     String    @map("display_name") @db.VarChar(160)
+  encryptedConfig Bytes     @map("encrypted_config") @db.Blob
+  verifiedAt      DateTime? @map("verified_at") @db.DateTime(3)
+  enabled         Boolean   @default(true)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt       DateTime? @map("deleted_at") @db.DateTime(3)
 
   monitors     MonitorChannel[]
   outboxEvents NotificationOutbox[]

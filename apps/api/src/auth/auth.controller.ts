@@ -1,9 +1,11 @@
 import { Body, Controller, Get, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { hashAccountPassword, prisma, verifyAccountPassword } from '@linkalive/database';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { getConfig } from '../common/config.js';
 import { Public } from './public.decorator.js';
-import { createSessionToken, safeSecretEqual } from './session.js';
+import type { AuthenticatedRequest, AuthenticatedUser } from './auth.types.js';
+import { createSessionToken } from './session.js';
 
 const loginSchema = z.object({
   username: z.string().min(1).max(128),
@@ -14,11 +16,11 @@ const loginSchema = z.object({
 export class AuthController {
   @Public()
   @Post('login')
-  login(
+  async login(
     @Body() rawBody: unknown,
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
-  ): { user: { username: string } } {
+  ): Promise<{ user: AuthenticatedUser }> {
     const config = getConfig();
     const origin = request.headers.origin;
     if (origin && !config.webOrigins.includes(origin.replace(/\/$/, ''))) {
@@ -26,26 +28,31 @@ export class AuthController {
     }
 
     const body = loginSchema.safeParse(rawBody);
-    if (
-      !body.success ||
-      !safeSecretEqual(body.data.username, config.adminUsername) ||
-      !safeSecretEqual(body.data.password, config.adminPassword)
-    ) {
+    if (!body.success) {
       throw new UnauthorizedException('아이디 또는 비밀번호가 올바르지 않습니다.');
     }
 
-    reply.setCookie(
-      config.authCookieName,
-      createSessionToken(config.adminUsername, config.authSecret),
-      {
-        httpOnly: true,
-        secure: config.cookieSecure,
-        sameSite: 'strict',
-        path: '/',
-        maxAge: 8 * 60 * 60,
-      },
-    );
-    return { user: { username: config.adminUsername } };
+    const account = await prisma.account.findUnique({ where: { username: body.data.username } });
+    const passwordMatches = account
+      ? await verifyAccountPassword(body.data.password, account.passwordHash)
+      : (await hashAccountPassword(body.data.password), false);
+    if (!account?.enabled || !passwordMatches) {
+      throw new UnauthorizedException('아이디 또는 비밀번호가 올바르지 않습니다.');
+    }
+
+    await prisma.account.update({
+      where: { id: account.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    reply.setCookie(config.authCookieName, createSessionToken(account.id, config.authSecret), {
+      httpOnly: true,
+      secure: config.cookieSecure,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 8 * 60 * 60,
+    });
+    return { user: { id: account.id, username: account.username, role: account.role } };
   }
 
   @Post('logout')
@@ -56,7 +63,7 @@ export class AuthController {
   }
 
   @Get('me')
-  me(): { user: { username: string } } {
-    return { user: { username: getConfig().adminUsername } };
+  me(@Req() request: AuthenticatedRequest): { user: AuthenticatedUser } {
+    return { user: request.user };
   }
 }

@@ -1,10 +1,10 @@
 # LinkAlive 운영 안내서
 
-이 문서는 단일 지역·단일 관리자 MVP를 운영할 때 필요한 배포, 점검, 백업과 복구 절차를 설명합니다. 운영 환경에서는 MySQL/MariaDB와 Redis를 관리형 서비스로 분리하고, 웹/API 앞에 HTTPS reverse proxy를 두는 구성을 권장합니다.
+이 문서는 단일 지역 LinkAlive를 운영할 때 필요한 배포, 점검, 백업과 복구 절차를 설명합니다. 운영 환경에서는 MySQL/MariaDB와 Redis를 관리형 서비스로 분리하고, 웹/API 앞에 HTTPS reverse proxy를 두는 구성을 권장합니다.
 
 ## 배포 전 확인
 
-- `ADMIN_PASSWORD`, `AUTH_SECRET`, `ENCRYPTION_KEY`를 충분히 긴 무작위 값으로 설정합니다.
+- 최초 관리자 생성용 `ADMIN_PASSWORD`, 세션용 `AUTH_SECRET`, 암호화용 `ENCRYPTION_KEY`를 충분히 긴 무작위 값으로 설정합니다. 최초 계정 생성 후 관리자 비밀번호는 계정 관리 화면에서 변경합니다.
 - `ENCRYPTION_KEY`는 Base64로 인코딩한 정확히 32바이트 키여야 합니다. 데이터 재암호화 절차 없이 기존 키를 교체하면 저장된 URL과 알림 채널을 읽을 수 없습니다.
 - HTTPS 환경에서는 `COOKIE_SECURE=true`, 실제 관리 화면 주소로 `WEB_ORIGIN`과 `APP_BASE_URL`을 설정합니다. `APP_BASE_URL`에는 자격 증명, query, fragment를 넣지 않습니다.
 - 웹 이미지를 빌드할 때 브라우저에서 접근 가능한 API 주소를 `NEXT_PUBLIC_API_BASE_URL` build argument로 지정합니다. 운영값을 생략하면 브라우저가 잘못된 `localhost:4000`을 호출합니다.
@@ -18,9 +18,14 @@
 
 1. MySQL/MariaDB와 Redis가 준비되었는지 확인합니다.
 2. `pnpm db:deploy`로 준비된 migration을 적용합니다.
-3. API를 시작하고 `/health/live`, `/health/ready`를 확인합니다.
-4. scheduler와 worker를 시작합니다.
-5. web을 시작하고 로그인, 시험 URL 검사, 시험 알림을 각각 한 번 수행합니다.
+3. `pnpm db:bootstrap:admin`으로 계정 테이블이 비어 있을 때 최초 관리자를 생성합니다.
+4. API를 시작하고 `/health/live`, `/health/ready`를 확인합니다.
+5. scheduler와 worker를 시작합니다.
+6. web을 시작하고 로그인, 시험 URL 검사, 시험 알림을 각각 한 번 수행합니다.
+
+Windows 공개 운영에서는 `start_server.bat`를 사용합니다. 이 파일은 content hash가 포함된
+프로덕션 웹 자산을 빌드한 뒤 실행하므로 Cloudflare 같은 프록시 뒤에서도 이전 개발 번들과
+새 서버 렌더링이 섞이는 문제를 방지합니다. `pnpm dev`는 로컬 개발 용도로만 사용합니다.
 
 전체 Docker 구성에서는 다음 명령이 migration을 먼저 적용하고 각 프로세스를 시작합니다.
 

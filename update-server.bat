@@ -81,6 +81,8 @@ if errorlevel 1 goto :update_failed
 echo [4/4] Applying database migrations...
 call pnpm db:deploy >> "%__UPDATE_LOG%" 2>>&1
 if errorlevel 1 goto :update_failed
+call pnpm db:bootstrap:admin >> "%__UPDATE_LOG%" 2>>&1
+if errorlevel 1 goto :update_failed
 
 echo LinkAlive update completed: %DATE% %TIME%>> "%__UPDATE_LOG%"
 echo.

@@ -19,7 +19,6 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
   ADMIN_USERNAME: z.string().min(1).max(160).default('admin'),
-  ADMIN_PASSWORD: z.string().min(4),
   AUTH_SECRET: z.string().min(32),
   AUTH_COOKIE_NAME: z.string().min(1).default('linkalive_session'),
   COOKIE_SECURE: booleanFromString,
@@ -47,7 +46,6 @@ export type ApiConfig = {
   databaseUrl: string;
   redisUrl: string;
   adminUsername: string;
-  adminPassword: string;
   authSecret: string;
   authCookieName: string;
   cookieSecure: boolean;
@@ -69,9 +67,6 @@ export function getConfig(): ApiConfig {
   if (cached) return cached;
 
   const parsed = schema.parse(process.env);
-  if (parsed.ADMIN_PASSWORD === 'change-this-before-running') {
-    throw new Error('ADMIN_PASSWORD must be changed from the example value');
-  }
   if (parsed.AUTH_SECRET === 'replace-with-at-least-32-random-characters') {
     throw new Error('AUTH_SECRET must be changed from the example value');
   }
@@ -105,7 +100,6 @@ export function getConfig(): ApiConfig {
     databaseUrl: parsed.DATABASE_URL,
     redisUrl: parsed.REDIS_URL,
     adminUsername: parsed.ADMIN_USERNAME,
-    adminPassword: parsed.ADMIN_PASSWORD,
     authSecret: parsed.AUTH_SECRET,
     authCookieName: parsed.AUTH_COOKIE_NAME,
     cookieSecure: parsed.COOKIE_SECURE,

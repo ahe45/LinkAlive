@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@/components/Icon';
+import { useAuthUser } from '@/components/AppShell';
 import { MonitorForm } from '@/components/MonitorForm';
 import { EmptyState, ErrorPanel, InlineNotice, PageLoader } from '@/components/StateViews';
 import { IncidentBadge, OutcomeBadge, StatusBadge } from '@/components/StatusBadge';
@@ -40,6 +41,7 @@ export default function MonitorDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
+  const currentUser = useAuthUser();
   const { showToast } = useToast();
   const [monitor, setMonitor] = useState<Monitor | null>(null);
   const [checks, setChecks] = useState<CheckResult[]>([]);
@@ -67,7 +69,9 @@ export default function MonitorDetailPage() {
             monitorsApi.get(id),
             monitorsApi.checks(id),
             monitorsApi.incidents(id),
-            notificationChannelsApi.list(),
+            currentUser.role === 'ADMIN'
+              ? notificationChannelsApi.list()
+              : Promise.resolve({ items: [], nextCursor: null }),
           ]);
         setMonitor(monitorResponse);
         setChecks(checksResponse.items);
@@ -86,7 +90,7 @@ export default function MonitorDetailPage() {
         setRefreshing(false);
       }
     },
-    [id, router],
+    [currentUser.role, id, router],
   );
 
   useEffect(() => {
@@ -404,6 +408,7 @@ export default function MonitorDetailPage() {
               channelIds: monitor.channelIds ?? [],
             }}
             channels={channels}
+            showNotificationChannels={currentUser.role === 'ADMIN'}
             onSubmit={saveSettings}
             onTest={monitorsApi.test}
             submitting={saving}

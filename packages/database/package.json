@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "bootstrap:admin": "node dist/bootstrap-admin.js",
     "retention": "tsx src/retention-cli.ts",
     "test": "vitest run src",
     "test:integration": "vitest run integration",

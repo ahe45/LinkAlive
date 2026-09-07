@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { z } from 'zod';
+import { AdminOnly } from '../auth/admin-only.decorator.js';
 import { parseInput, parseLimit } from '../common/validation.js';
 import {
   notificationChannelInputSchema,
@@ -21,6 +22,7 @@ import { NotificationChannelsService } from './notification-channels.service.js'
 const idSchema = z.string().uuid('올바른 알림 채널 ID가 아닙니다.');
 
 @Controller('notification-channels')
+@AdminOnly()
 export class NotificationChannelsController {
   constructor(
     @Inject(NotificationChannelsService) private readonly channels: NotificationChannelsService,

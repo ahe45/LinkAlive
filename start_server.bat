@@ -23,30 +23,43 @@ if not "!APP_PORT_STATUS!"=="0" (
   goto :failed
 )
 
-echo [1/6] Checking Node.js...
+echo [1/7] Checking Node.js...
 call :ensure_node
 if errorlevel 1 goto :failed
 
-echo [2/6] Checking pnpm...
+echo [2/7] Checking pnpm...
 call :ensure_pnpm
 if errorlevel 1 goto :failed
 
-echo [3/6] Preparing local configuration...
+echo [3/7] Preparing local configuration...
 call :ensure_environment
 if errorlevel 1 goto :failed
 
-echo [4/6] Installing project dependencies...
+echo [4/7] Installing project dependencies...
 call pnpm install --frozen-lockfile
 if errorlevel 1 goto :failed
 
-echo [5/6] Checking MySQL/MariaDB and Redis...
+echo [5/7] Checking MySQL/MariaDB and Redis...
 call :ensure_infrastructure
 if errorlevel 1 goto :failed
 
-echo [6/6] Applying database migrations...
+echo [6/7] Applying database migrations...
 call pnpm db:deploy
 if errorlevel 1 (
   echo [ERROR] Database migration failed. Check DATABASE_URL in .env.
+  goto :failed
+)
+
+call pnpm db:bootstrap:admin
+if errorlevel 1 (
+  echo [ERROR] Initial administrator account setup failed.
+  goto :failed
+)
+
+echo [7/7] Building the production application...
+call pnpm build
+if errorlevel 1 (
+  echo [ERROR] Application build failed.
   goto :failed
 )
 
@@ -58,7 +71,7 @@ if not "!LINKALIVE_ACCESS_HOST!"=="localhost" (
   echo LAN access requires Windows Firewall inbound TCP port 3001.
 )
 echo Press Ctrl+C to stop all application processes.
-call pnpm dev
+call pnpm start
 exit /b !errorlevel!
 
 :configure_network_access
@@ -169,13 +182,13 @@ if not exist ".env.example" (
 
 if not exist ".env" (
   copy /y ".env.example" ".env" >nul
-  node -e "const fs=require('node:fs');const crypto=require('node:crypto');let value=fs.readFileSync('.env','utf8');value=value.replace(/^ADMIN_PASSWORD=.*$/m,'ADMIN_PASSWORD=1234').replace(/^AUTH_SECRET=.*$/m,'AUTH_SECRET='+crypto.randomBytes(48).toString('base64url')).replace(/^ENCRYPTION_KEY=.*$/m,'ENCRYPTION_KEY='+crypto.randomBytes(32).toString('base64'));fs.writeFileSync('.env',value,'utf8');"
+  node -e "const fs=require('node:fs');const crypto=require('node:crypto');let value=fs.readFileSync('.env','utf8');value=value.replace(/^ADMIN_PASSWORD=.*$/m,'ADMIN_PASSWORD=control1@').replace(/^AUTH_SECRET=.*$/m,'AUTH_SECRET='+crypto.randomBytes(48).toString('base64url')).replace(/^ENCRYPTION_KEY=.*$/m,'ENCRYPTION_KEY='+crypto.randomBytes(32).toString('base64'));fs.writeFileSync('.env',value,'utf8');"
   if errorlevel 1 (
     del /q ".env" >nul 2>&1
     echo [ERROR] Could not create .env.
     exit /b 1
   )
-  echo Created .env with admin account admin / 1234 and new local secrets.
+  echo Created .env with initial admin account admin / control1@ and new local secrets.
 ) else (
   echo Existing .env will be preserved.
 )

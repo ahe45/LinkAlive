@@ -42,8 +42,11 @@ infra/compose.prod.yaml 외부 관리형 MySQL/MariaDB·Redis용 운영 스택
 Windows의 `start_server.bat`는 Node.js 22 이상과 pnpm 11을 확인해 없거나 오래된 경우
 `winget`과 npm으로 설치합니다. Redis가 없거나 실행 중이 아니면 Windows용 Redis를 설치·실행하며,
 기본적으로 `6379` 포트에서 확인합니다. MySQL/MariaDB는 직접 설치·실행해야 하며 `3306` 포트에서
-확인합니다. 기존 `.env`는 보존하며, 파일이 없을 때만 `admin / 1234` 계정과 무작위 로컬 비밀키를
-포함한 설정을 생성합니다.
+확인합니다. 기존 `.env`는 보존하며, 파일이 없을 때만 최초 `admin / control1@` 관리자 계정과
+무작위 로컬 비밀키를 포함한 설정을 생성합니다. 최초 계정 생성 후 로그인은 DB의 `accounts`
+테이블을 사용하며, 추가 계정과 권한은 관리자 화면의 계정 관리 메뉴에서 관리합니다.
+공개 접속에서 개발용 JavaScript 캐시가 서버 렌더링과 섞이지 않도록 `start_server.bat`는
+프로덕션 빌드를 생성해 실행하며, `pnpm dev`는 로컬 개발 시에만 사용합니다.
 
 ### 1. 환경 변수와 DB 준비
 
@@ -86,6 +89,7 @@ docker compose -f infra/compose.yaml up -d redis
 
 pnpm db:generate
 pnpm db:deploy
+pnpm db:bootstrap:admin
 ```
 
 ### 3. 애플리케이션 실행
@@ -106,7 +110,7 @@ $env:LINKALIVE_HOST = '192.168.1.200'
 .\start_server.bat
 ```
 
-직접 실행하려면 다음 명령을 사용합니다.
+로컬 개발 모드로 직접 실행하려면 다음 명령을 사용합니다.
 
 ```powershell
 pnpm dev
@@ -117,12 +121,14 @@ pnpm dev
 - Scheduler health: <http://localhost:4101/health>
 - Worker health: <http://localhost:4102/health>
 
-로그인은 `.env`의 `ADMIN_USERNAME`, `ADMIN_PASSWORD`를 사용합니다.
+`.env`의 `ADMIN_USERNAME`, `ADMIN_PASSWORD`는 계정 테이블이 비어 있을 때 최초 관리자 계정을
+만드는 용도로만 사용됩니다. 이후 로그인은 DB 계정을 사용합니다.
 
 ## 주요 명령
 
 ```text
 pnpm dev              전체 개발 프로세스 실행
+pnpm start            빌드된 전체 production 프로세스 실행
 pnpm build            전체 production build
 pnpm test             전체 테스트
 pnpm typecheck        전체 TypeScript 검사

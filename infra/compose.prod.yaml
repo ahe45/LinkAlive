@@ -10,7 +10,12 @@ services:
       target: api
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?Set NEXT_PUBLIC_API_BASE_URL in .env}
-    command: ['pnpm', '--filter', '@linkalive/database', 'prisma:deploy']
+    command:
+      - sh
+      - -c
+      - pnpm --filter @linkalive/database prisma:deploy && node packages/database/dist/bootstrap-admin.js
+    env_file:
+      - ../.env
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}

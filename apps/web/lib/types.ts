@@ -183,11 +183,43 @@ export interface CursorPage<T> {
 }
 
 export interface AuthUser {
+  id: string;
   username: string;
+  role: 'ADMIN' | 'USER';
 }
 
 export interface AuthResponse {
   user: AuthUser;
+}
+
+export interface Account {
+  id: string;
+  username: string;
+  role: 'ADMIN' | 'USER';
+  enabled: boolean;
+  lastLoginAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountInput {
+  username: string;
+  password: string;
+  role: 'ADMIN' | 'USER';
+  enabled: boolean;
+}
+
+export interface AccountPatch {
+  username?: string;
+  password?: string;
+  role?: 'ADMIN' | 'USER';
+  enabled?: boolean;
+}
+
+export interface AccountBulkResult {
+  created: number;
+  skipped: number;
+  errors: Array<{ row: number; username: string; message: string }>;
 }
 
 export interface ApiValidationError {

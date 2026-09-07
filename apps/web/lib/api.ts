@@ -1,4 +1,8 @@
 import type {
+  Account,
+  AccountBulkResult,
+  AccountInput,
+  AccountPatch,
   ApiValidationError,
   AuthResponse,
   CheckResult,
@@ -113,6 +117,24 @@ export const authApi = {
     apiFetch<{ ok: true }>('/api/v1/auth/logout', {
       method: 'POST',
     }),
+};
+
+export const accountsApi = {
+  list: () => apiFetch<{ items: Account[] }>('/api/v1/accounts'),
+  create: (input: AccountInput) =>
+    apiFetch<Account>('/api/v1/accounts', { method: 'POST', body: jsonBody(input) }),
+  bulkCreate: (accounts: AccountInput[]) =>
+    apiFetch<AccountBulkResult>('/api/v1/accounts/bulk', {
+      method: 'POST',
+      body: jsonBody({ accounts }),
+    }),
+  update: (id: string, patch: AccountPatch) =>
+    apiFetch<Account>(`/api/v1/accounts/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: jsonBody(patch),
+    }),
+  remove: (id: string) =>
+    apiFetch<void>(`/api/v1/accounts/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };
 
 export const dashboardApi = {

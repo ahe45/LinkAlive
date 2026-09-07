@@ -38,6 +38,7 @@ interface MonitorFormProps {
   initialValue?: Partial<MonitorInput>;
   currentDisplayUrl?: string;
   channels?: NotificationChannel[];
+  showNotificationChannels?: boolean;
   onSubmit: (value: MonitorInput) => Promise<void>;
   onTest?: (value: MonitorInput) => Promise<CheckResult>;
   submitLabel?: string;
@@ -51,6 +52,7 @@ export function MonitorForm({
   initialValue,
   currentDisplayUrl,
   channels = [],
+  showNotificationChannels = true,
   onSubmit,
   onTest,
   submitLabel = mode === 'create' ? '모니터 만들기' : '변경사항 저장',
@@ -182,78 +184,86 @@ export function MonitorForm({
 
   return (
     <form className="monitor-form" onSubmit={submit} noValidate>
-      <section className="form-section">
-        <div className="form-section-heading">
-          <span className="section-number">01</span>
-          <div>
-            <h2>기본 정보</h2>
-            <p>구분하기 쉬운 이름과 검사할 주소를 입력하세요.</p>
+      {showNotificationChannels ? (
+        <section className="form-section">
+          <div className="form-section-heading">
+            <span className="section-number">01</span>
+            <div>
+              <h2>기본 정보</h2>
+              <p>구분하기 쉬운 이름과 검사할 주소를 입력하세요.</p>
+            </div>
           </div>
-        </div>
-        <div className="form-grid">
-          <label className="field field-span-2">
-            <span className="field-label">
-              모니터 이름 <em>필수</em>
-            </span>
-            <input
-              type="text"
-              value={value.name}
-              onChange={(event) => patchValue({ name: event.target.value })}
-              placeholder="예: 공식 웹사이트"
-              maxLength={160}
-              aria-invalid={Boolean(errors.name)}
-            />
-            {errors.name ? <span className="field-error">{errors.name}</span> : null}
-          </label>
-
-          <label className="field field-span-2">
-            <span className="field-label">검사 URL {mode === 'create' ? <em>필수</em> : null}</span>
-            {mode === 'edit' && currentDisplayUrl ? (
-              <span className="current-value">
-                <Icon name="globe" size={15} /> 현재 주소: <strong>{currentDisplayUrl}</strong>
-              </span>
-            ) : null}
-            <span className="input-with-prefix">
-              <span>
-                <Icon name="globe" size={17} />
+          <div className="form-grid">
+            <label className="field field-span-2">
+              <span className="field-label">
+                모니터 이름 <em>필수</em>
               </span>
               <input
-                type="url"
-                value={value.url}
-                onChange={(event) => patchValue({ url: event.target.value })}
-                placeholder={
-                  mode === 'edit' ? '주소를 변경할 때만 새 URL 입력' : 'https://example.com/health'
-                }
-                inputMode="url"
-                aria-invalid={Boolean(errors.url)}
+                type="text"
+                value={value.name}
+                onChange={(event) => patchValue({ name: event.target.value })}
+                placeholder="예: 공식 웹사이트"
+                maxLength={160}
+                aria-invalid={Boolean(errors.name)}
               />
-            </span>
-            {errors.url ? <span className="field-error">{errors.url}</span> : null}
-            <span className="field-help">
-              http:// 또는 https:// 주소를 입력하세요. localhost, 사설 IP, 사용자 지정 포트도 사용할
-              수 있습니다.
-            </span>
-          </label>
+              {errors.name ? <span className="field-error">{errors.name}</span> : null}
+            </label>
 
-          <label className="field">
-            <span className="field-label">검사 주기 (초)</span>
-            <span className="input-with-unit input-with-unit-compact">
-              <input
-                type="number"
-                min={MIN_INTERVAL_SECONDS}
-                max={MAX_INTERVAL_SECONDS}
-                step={1}
-                value={value.intervalSec}
-                onChange={(event) => patchValue({ intervalSec: Number(event.target.value) })}
-                aria-invalid={Boolean(errors.intervalSec)}
-              />
-              <span>초</span>
-            </span>
-            {errors.intervalSec ? <span className="field-error">{errors.intervalSec}</span> : null}
-            <span className="field-help">5초부터 86,400초(24시간)까지 입력할 수 있습니다.</span>
-          </label>
-        </div>
-      </section>
+            <label className="field field-span-2">
+              <span className="field-label">
+                검사 URL {mode === 'create' ? <em>필수</em> : null}
+              </span>
+              {mode === 'edit' && currentDisplayUrl ? (
+                <span className="current-value">
+                  <Icon name="globe" size={15} /> 현재 주소: <strong>{currentDisplayUrl}</strong>
+                </span>
+              ) : null}
+              <span className="input-with-prefix">
+                <span>
+                  <Icon name="globe" size={17} />
+                </span>
+                <input
+                  type="url"
+                  value={value.url}
+                  onChange={(event) => patchValue({ url: event.target.value })}
+                  placeholder={
+                    mode === 'edit'
+                      ? '주소를 변경할 때만 새 URL 입력'
+                      : 'https://example.com/health'
+                  }
+                  inputMode="url"
+                  aria-invalid={Boolean(errors.url)}
+                />
+              </span>
+              {errors.url ? <span className="field-error">{errors.url}</span> : null}
+              <span className="field-help">
+                http:// 또는 https:// 주소를 입력하세요. localhost, 사설 IP, 사용자 지정 포트도
+                사용할 수 있습니다.
+              </span>
+            </label>
+
+            <label className="field">
+              <span className="field-label">검사 주기 (초)</span>
+              <span className="input-with-unit input-with-unit-compact">
+                <input
+                  type="number"
+                  min={MIN_INTERVAL_SECONDS}
+                  max={MAX_INTERVAL_SECONDS}
+                  step={1}
+                  value={value.intervalSec}
+                  onChange={(event) => patchValue({ intervalSec: Number(event.target.value) })}
+                  aria-invalid={Boolean(errors.intervalSec)}
+                />
+                <span>초</span>
+              </span>
+              {errors.intervalSec ? (
+                <span className="field-error">{errors.intervalSec}</span>
+              ) : null}
+              <span className="field-help">5초부터 86,400초(24시간)까지 입력할 수 있습니다.</span>
+            </label>
+          </div>
+        </section>
+      ) : null}
 
       <section className="form-section">
         <div className="form-section-heading">
