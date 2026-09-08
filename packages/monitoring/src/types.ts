@@ -94,6 +94,7 @@ export interface TransportResponse {
 }
 
 export interface TransportRequest {
+  cookie?: string;
   method: 'GET' | 'HEAD';
   signal: AbortSignal;
   headersTimeoutMs: number;

@@ -232,6 +232,9 @@ importers:
 
   packages/monitoring:
     dependencies:
+      tough-cookie:
+        specifier: ^6.0.2
+        version: 6.0.2
       undici:
         specifier: ^7.15.0
         version: 7.29.0
@@ -3248,6 +3251,19 @@ packages:
       }
     engines: { node: '>=14.0.0' }
 
+  tldts-core@7.4.11:
+    resolution:
+      {
+        integrity: sha512-CW3WN2rIIE/Of21mulhgnGOwoDyEFNygyIBOONSdyAuSATgMMUCpLeUlB+E8sAwA5xRV9hYPl+kyZ9citHCaKg==,
+      }
+
+  tldts@7.4.11:
+    resolution:
+      {
+        integrity: sha512-aBiNayCfTQxuIJBm06M+xR14cYaYlDlSXZbgsnKzKNxDKUVq7KFwTjwBSsb7m9Y5xO8WfPnBc63WaYFMTGlvqw==,
+      }
+    hasBin: true
+
   tmp@0.2.7:
     resolution:
       {
@@ -3268,6 +3284,13 @@ packages:
         integrity: sha512-dRXchy+C0IgK8WPC6xvCHFRIWYUbqqdEIKPaKo/AcTUNzwLTK6AH7RjdLWsEZcAN/TBdtfUw3PYEgPr5VPr6ww==,
       }
     engines: { node: '>=14.16' }
+
+  tough-cookie@6.0.2:
+    resolution:
+      {
+        integrity: sha512-exgYmnmL/sJpR3upZfXG5PoatXQii55xAiXGXzY+sROLZ/Y+SLcp9PgJNI9Vz37HpQ74WvDcLT8eqm+kV3FzrA==,
+      }
+    engines: { node: '>=16' }
 
   traverse@0.3.9:
     resolution:
@@ -5174,6 +5197,12 @@ snapshots:
 
   tinyspy@4.0.4: {}
 
+  tldts-core@7.4.11: {}
+
+  tldts@7.4.11:
+    dependencies:
+      tldts-core: 7.4.11
+
   tmp@0.2.7: {}
 
   toad-cache@3.7.4: {}
@@ -5183,6 +5212,10 @@ snapshots:
       '@borewit/text-codec': 0.2.2
       '@tokenizer/token': 0.3.0
       ieee754: 1.2.1
+
+  tough-cookie@6.0.2:
+    dependencies:
+      tldts: 7.4.11
 
   traverse@0.3.9: {}
 

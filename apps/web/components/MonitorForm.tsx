@@ -11,6 +11,9 @@ import type { CheckResult, MonitorInput, NotificationChannel } from '@/lib/types
 const MIN_INTERVAL_SECONDS = 5;
 const MAX_INTERVAL_SECONDS = 86_400;
 const ADVANCED_ERROR_FIELDS = [
+  'intervalSec',
+  'failureThreshold',
+  'recoveryThreshold',
   'timeoutMs',
   'expectedStatus',
   'expectedKeyword',
@@ -236,80 +239,13 @@ export function MonitorForm({
               수 있습니다.
             </span>
           </label>
-
-          <label className="field">
-            <span className="field-label">검사 주기 (초)</span>
-            <span className="input-with-unit input-with-unit-compact">
-              <input
-                type="number"
-                min={MIN_INTERVAL_SECONDS}
-                max={MAX_INTERVAL_SECONDS}
-                step={1}
-                value={value.intervalSec}
-                onChange={(event) => patchValue({ intervalSec: Number(event.target.value) })}
-                aria-invalid={Boolean(errors.intervalSec)}
-              />
-              <span>초</span>
-            </span>
-            {errors.intervalSec ? <span className="field-error">{errors.intervalSec}</span> : null}
-            <span className="field-help">5초부터 86,400초(24시간)까지 입력할 수 있습니다.</span>
-          </label>
         </div>
-      </section>
-
-      <section className="form-section">
-        <div className="form-section-heading">
-          <span className="section-number">02</span>
-          <div>
-            <h2>장애 민감도</h2>
-            <p>짧은 네트워크 흔들림이 실제 장애로 오인되지 않도록 조절합니다.</p>
-          </div>
-        </div>
-        <div className="form-grid">
-          <label className="field">
-            <span className="field-label">장애 확정</span>
-            <span className="input-with-unit">
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={value.failureThreshold}
-                onChange={(event) => patchValue({ failureThreshold: Number(event.target.value) })}
-                aria-invalid={Boolean(errors.failureThreshold)}
-              />
-              <span>회 연속 실패</span>
-            </span>
-            {errors.failureThreshold ? (
-              <span className="field-error">{errors.failureThreshold}</span>
-            ) : null}
-          </label>
-          <label className="field">
-            <span className="field-label">복구 확정</span>
-            <span className="input-with-unit">
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={value.recoveryThreshold}
-                onChange={(event) => patchValue({ recoveryThreshold: Number(event.target.value) })}
-                aria-invalid={Boolean(errors.recoveryThreshold)}
-              />
-              <span>회 연속 성공</span>
-            </span>
-            {errors.recoveryThreshold ? (
-              <span className="field-error">{errors.recoveryThreshold}</span>
-            ) : null}
-          </label>
-        </div>
-        <InlineNotice>
-          권장 기본값은 3회 실패 후 장애 확정, 2회 성공 후 복구 확정입니다.
-        </InlineNotice>
       </section>
 
       {showNotificationChannels ? (
         <section className="form-section">
           <div className="form-section-heading">
-            <span className="section-number">03</span>
+            <span className="section-number">02</span>
             <div>
               <h2>알림 채널</h2>
               <p>장애와 복구 메시지를 받을 채널을 선택하세요.</p>
@@ -382,6 +318,82 @@ export function MonitorForm({
             <Icon name="chevronRight" size={17} />
           </span>
         </summary>
+
+        <div className="advanced-settings-body">
+          <div className="advanced-settings-heading">
+            <h3>검사 주기</h3>
+            <p>URL 상태를 확인할 간격을 설정합니다.</p>
+          </div>
+          <div className="form-grid">
+            <label className="field">
+              <span className="field-label">검사 주기 (초)</span>
+              <span className="input-with-unit input-with-unit-compact">
+                <input
+                  type="number"
+                  min={MIN_INTERVAL_SECONDS}
+                  max={MAX_INTERVAL_SECONDS}
+                  step={1}
+                  value={value.intervalSec}
+                  onChange={(event) => patchValue({ intervalSec: Number(event.target.value) })}
+                  aria-invalid={Boolean(errors.intervalSec)}
+                />
+                <span>초</span>
+              </span>
+              {errors.intervalSec ? (
+                <span className="field-error">{errors.intervalSec}</span>
+              ) : null}
+              <span className="field-help">5초부터 86,400초(24시간)까지 입력할 수 있습니다.</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="advanced-settings-body">
+          <div className="advanced-settings-heading">
+            <h3>장애 민감도</h3>
+            <p>짧은 네트워크 흔들림이 실제 장애로 오인되지 않도록 조절합니다.</p>
+          </div>
+          <div className="form-grid">
+            <label className="field">
+              <span className="field-label">장애 확정</span>
+              <span className="input-with-unit">
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={value.failureThreshold}
+                  onChange={(event) => patchValue({ failureThreshold: Number(event.target.value) })}
+                  aria-invalid={Boolean(errors.failureThreshold)}
+                />
+                <span>회 연속 실패</span>
+              </span>
+              {errors.failureThreshold ? (
+                <span className="field-error">{errors.failureThreshold}</span>
+              ) : null}
+            </label>
+            <label className="field">
+              <span className="field-label">복구 확정</span>
+              <span className="input-with-unit">
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={value.recoveryThreshold}
+                  onChange={(event) =>
+                    patchValue({ recoveryThreshold: Number(event.target.value) })
+                  }
+                  aria-invalid={Boolean(errors.recoveryThreshold)}
+                />
+                <span>회 연속 성공</span>
+              </span>
+              {errors.recoveryThreshold ? (
+                <span className="field-error">{errors.recoveryThreshold}</span>
+              ) : null}
+            </label>
+          </div>
+          <InlineNotice>
+            권장 기본값은 3회 실패 후 장애 확정, 2회 성공 후 복구 확정입니다.
+          </InlineNotice>
+        </div>
 
         <div className="advanced-settings-body">
           <div className="advanced-settings-heading">

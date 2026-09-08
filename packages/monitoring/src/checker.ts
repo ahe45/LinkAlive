@@ -1,4 +1,5 @@
 import { Readable, Transform, type TransformCallback } from 'node:stream';
+import { CookieJar } from 'tough-cookie';
 import {
   constants as zlibConstants,
   createBrotliDecompress,
@@ -443,15 +444,19 @@ export function createHttpChecker(dependencies: HttpCheckerDependencies = {}) {
     let response: TransportResponse | null = null;
     let destinationLease: DestinationLease | null = null;
     const visited = new Set<string>();
+    // A fresh session per check: never share cookies between monitors or runs.
+    const cookies = new CookieJar();
 
     try {
       while (true) {
         const destination = await resolveSafeDestination(currentUrl, resolver, controller.signal);
         const canonical = destination.url.toString();
-        if (visited.has(canonical)) {
+        const cookie = cookies.getCookieStringSync(canonical);
+        const requestState = JSON.stringify([canonical, cookie]);
+        if (visited.has(requestState)) {
           throw new RedirectPolicyError('리다이렉트 순환이 감지되었습니다.');
         }
-        visited.add(canonical);
+        visited.add(requestState);
         currentUrl = canonical;
 
         destinationLease = destinationLimiter
@@ -466,6 +471,7 @@ export function createHttpChecker(dependencies: HttpCheckerDependencies = {}) {
           headersTimeoutMs: Math.min(5_000, remaining),
           bodyTimeoutMs: remaining,
           maxHeaderBytes: MAX_HEADER_BYTES,
+          ...(cookie ? { cookie } : {}),
         });
         statusCode = response.statusCode;
         ttfbMs = Math.max(0, Math.round(monotonicNow() - startedTick));
@@ -488,6 +494,10 @@ export function createHttpChecker(dependencies: HttpCheckerDependencies = {}) {
             next = new URL(location, destination.url);
           } catch (error) {
             throw new RedirectPolicyError('리다이렉트 주소가 올바르지 않습니다.', { cause: error });
+          }
+          const setCookie = response.headers['set-cookie'];
+          for (const value of Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : []) {
+            cookies.setCookieSync(value, canonical, { ignoreError: true });
           }
           response.body.destroy();
           await response.close();

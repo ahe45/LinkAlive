@@ -74,8 +74,13 @@ export class UndiciHttpTransport implements HttpTransport {
           'accept-encoding': 'identity',
           'user-agent': 'LinkAlive/0.1 (+https://linkalive.invalid)',
           ...(authorization ? { authorization } : {}),
+          ...(options.cookie ? { cookie: options.cookie } : {}),
         },
       });
+      // Destroying an unread Undici body emits an asynchronous AbortError.
+      // Keep an error listener for header-only checks and redirect cleanup;
+      // body consumers still receive stream failures through their iterator.
+      response.body.on('error', () => undefined);
       return {
         statusCode: response.statusCode,
         headers: response.headers,
