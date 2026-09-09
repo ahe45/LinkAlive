@@ -1,4 +1,5 @@
 'use client';
+import { TelegramChannelSelect } from '@/components/TelegramChannelSelect';
 
 import { FormEvent, useState } from 'react';
 import { Icon } from '@/components/Icon';
@@ -251,48 +252,11 @@ export function MonitorForm({
               <p>장애와 복구 메시지를 받을 채널을 선택하세요.</p>
             </div>
           </div>
-          {channels.length ? (
-            <div className="channel-select-grid">
-              {channels.map((channel) => {
-                const checked = value.channelIds.includes(channel.id);
-                return (
-                  <label
-                    className={`channel-choice${checked ? ' channel-choice-selected' : ''}`}
-                    key={channel.id}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(event) => {
-                        const channelIds = event.target.checked
-                          ? [...value.channelIds, channel.id]
-                          : value.channelIds.filter((id) => id !== channel.id);
-                        patchValue({ channelIds });
-                      }}
-                    />
-                    <span className={`channel-icon channel-${channel.type.toLowerCase()}`}>
-                      <Icon name="telegram" size={19} />
-                    </span>
-                    <span>
-                      <strong>{channel.displayName}</strong>
-                      <small>{channel.chatId ?? 'Telegram 알림 채널'}</small>
-                    </span>
-                    <span className="choice-check">
-                      <Icon name="check" size={14} />
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="channel-empty-note">
-              <Icon name="bell" size={20} />
-              <div>
-                <strong>등록된 알림 채널이 없습니다</strong>
-                <p>관리자가 알림 채널을 등록하고 활성화하면 여기에서 선택할 수 있습니다.</p>
-              </div>
-            </div>
-          )}
+          <TelegramChannelSelect
+            channels={channels}
+            selectedIds={value.channelIds}
+            onChange={(channelIds) => patchValue({ channelIds })}
+          />
           {errors.channelIds ? <span className="field-error">{errors.channelIds}</span> : null}
         </section>
       ) : null}

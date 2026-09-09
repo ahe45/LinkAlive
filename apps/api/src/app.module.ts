@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NetworkModule } from './network/network.module.js';
 import { APP_GUARD } from '@nestjs/core';
 import { AccountsModule } from './accounts/accounts.module.js';
 import { AuthGuard } from './auth/auth.guard.js';
@@ -12,6 +13,7 @@ import { InfrastructureLifecycleService } from './common/infrastructure-lifecycl
 
 @Module({
   imports: [
+    NetworkModule,
     AccountsModule,
     AuthModule,
     MonitorsModule,

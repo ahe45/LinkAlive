@@ -11,6 +11,7 @@ const navigation = [
   { href: '/dashboard', label: '대시보드', icon: 'activity' as const },
   { href: '/notifications', label: '알림 채널', icon: 'bell' as const, adminOnly: true },
   { href: '/accounts', label: '계정 관리', icon: 'user' as const, adminOnly: true },
+  { href: '/network', label: '감시 네트워크', icon: 'shield' as const, adminOnly: true },
 ];
 
 const AuthUserContext = createContext<AuthUser | null>(null);

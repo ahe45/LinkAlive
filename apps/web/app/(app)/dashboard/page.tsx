@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { EmptyState, ErrorPanel, SectionSkeleton } from '@/components/StateViews';
 import { StatusBadge } from '@/components/StatusBadge';
+import { NetworkWarning } from '@/components/NetworkWarning';
 import { useToast } from '@/components/ToastProvider';
 import { dashboardApi, getErrorMessage, isUnauthorized, monitorsApi } from '@/lib/api';
 import {
@@ -359,6 +360,7 @@ export default function DashboardPage() {
                       <div role="cell" data-label="상태">
                         <div className="status-badge-group">
                           <StatusBadge state={state} />
+                          <NetworkWarning monitor={monitor} />
                           {stale && state !== 'STALE' ? <StatusBadge state="STALE" /> : null}
                         </div>
                       </div>

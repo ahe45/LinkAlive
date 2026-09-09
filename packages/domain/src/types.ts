@@ -88,6 +88,7 @@ export type NotificationChannelType =
   (typeof NotificationChannelType)[keyof typeof NotificationChannelType];
 
 export const NotificationEventType = {
+  NETWORK_RECOVERY: 'NETWORK_RECOVERY',
   DOWN: 'DOWN',
   RECOVERY: 'RECOVERY',
   RESOLVED_SUMMARY: 'RESOLVED_SUMMARY',

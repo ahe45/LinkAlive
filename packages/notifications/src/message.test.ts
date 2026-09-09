@@ -3,6 +3,39 @@ import { describe, expect, it } from 'vitest';
 import { createStableMessageId, renderNotification, sanitizeDisplayUrl } from './message.js';
 
 describe('notification messages', () => {
+  it('renders a PC connectivity summary separately from a target recovery', () => {
+    const message = renderNotification({
+      eventType: 'NETWORK_RECOVERY',
+      monitorName: 'monitor-pc',
+      displayUrl: '(감시 PC 외부 연결)',
+      occurredAt: '2026-09-09T04:22:00Z',
+      networkStartedAt: '2026-09-09T04:20:00Z',
+      durationMs: 120_000,
+      errorMessageSafe: '대상 재검사: 정상 응답 1개, 확인 대기 0개.',
+    }).telegramText;
+    expect(message).toContain('LinkAlive 감시 PC 외부 연결 복구');
+    expect(message).toContain('감시 PC: monitor-pc');
+    expect(message).toContain('연결 이상 감지: 2026-09-09 13:20:00 (KST)');
+    expect(message).toContain('시각: 2026-09-09 13:22:00 (KST)');
+    expect(message).toContain('연결 확인 불가 시간: 2분 0초');
+    expect(message).not.toContain('장애 지속');
+  });
+  it.each([
+    ['2026-09-09T04:20:09.760Z', '2026-09-09 13:20:09 (KST)'],
+    [new Date('2026-09-09T04:20:09.760Z'), '2026-09-09 13:20:09 (KST)'],
+    ['2026-12-31T15:00:00.000Z', '2027-01-01 00:00:00 (KST)'],
+    ['2026-09-09T13:20:09+09:00', '2026-09-09 13:20:09 (KST)'],
+    ['invalid', '확인 불가'],
+  ])('formats notification time %s in Korea time', (occurredAt, expected) => {
+    const rendered = renderNotification({
+      eventType: 'DOWN',
+      monitorName: '시간 표시 확인',
+      displayUrl: 'https://example.com',
+      occurredAt,
+    });
+    expect(rendered.telegramText).toContain(`시각: ${expected}`);
+  });
+
   it('removes URL credentials, query values and fragments', () => {
     expect(sanitizeDisplayUrl('https://user:pass@example.com/path?token=secret#x')).toBe(
       'https://example.com/path',

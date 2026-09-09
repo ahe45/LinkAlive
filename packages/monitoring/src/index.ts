@@ -1,4 +1,5 @@
 export * from './checker.js';
+export * from './reference-check.js';
 export * from './destination-limiter.js';
 export * from './errors.js';
 export * from './transport.js';

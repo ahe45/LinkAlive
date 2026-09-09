@@ -1,4 +1,6 @@
 import { Queue, Worker } from 'bullmq';
+import { hostname } from 'node:os';
+import { NetworkGuard } from './network-guard.js';
 import { Redis } from 'ioredis';
 import { prisma, ScheduledCheckStatus } from '@linkalive/database';
 import { createHttpChecker, RedisDestinationLimiter } from '@linkalive/monitoring';
@@ -46,6 +48,10 @@ const scheduledChecker = createHttpChecker({
 });
 
 const telegramAdapter = new TelegramNotificationAdapter();
+const networkGuard = new NetworkGuard(
+  (process.env.NETWORK_OBSERVER_ID?.trim() || hostname()).slice(0, 160),
+  config.appBaseUrl,
+);
 const checkProcessor = new ScheduledCheckProcessor(
   {
     instanceId: config.instanceId,
@@ -56,6 +62,7 @@ const checkProcessor = new ScheduledCheckProcessor(
   },
   prisma,
   scheduledChecker,
+  networkGuard,
 );
 const notificationProcessor = new NotificationProcessor(
   {
@@ -171,6 +178,24 @@ notificationQueue.on('error', () => {
 
 let stopped = false;
 let outboxTimer: NodeJS.Timeout | undefined;
+let networkTimer: NodeJS.Timeout | undefined;
+let networkTick: Promise<void> | undefined;
+function pollNetwork(): void {
+  if (stopped) return;
+  let failed = false;
+  networkTick = networkGuard
+    .poll()
+    .catch(() => {
+      failed = true;
+      console.error(JSON.stringify({ event: 'network.probe_failed' }));
+    })
+    .finally(() => {
+      if (!stopped) {
+        networkTimer = setTimeout(pollNetwork, failed ? 10_000 : networkGuard.nextPollDelayMs());
+        networkTimer.unref?.();
+      }
+    });
+}
 async function dispatchOutbox(): Promise<void> {
   if (stopped) return;
   try {
@@ -193,9 +218,11 @@ async function shutdown(signal: string): Promise<void> {
   stopped = true;
   health.markStopping();
   if (outboxTimer) clearTimeout(outboxTimer);
+  if (networkTimer) clearTimeout(networkTimer);
   console.info(JSON.stringify({ event: 'worker.stopping', signal }));
   await closeHealthServer(healthServer);
   await Promise.allSettled([
+    ...(networkTick ? [networkTick] : []),
     checkWorker.close(),
     notificationWorker.close(),
     notificationQueue.close(),
@@ -212,6 +239,7 @@ async function start(): Promise<void> {
     health.markRunning();
     console.info(JSON.stringify({ event: 'worker.started', healthPort: config.healthPort }));
     void dispatchOutbox();
+    pollNetwork();
   } catch {
     console.error(JSON.stringify({ event: 'worker.start_failed' }));
     process.exitCode = 1;

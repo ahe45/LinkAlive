@@ -44,6 +44,7 @@ export function notificationSequence(eventType: NotificationEventTypeValue): num
     case NotificationEventType.RESOLVED_SUMMARY:
       return 2;
     case NotificationEventType.TEST:
+    case NotificationEventType.NETWORK_RECOVERY:
       return 1;
   }
 }

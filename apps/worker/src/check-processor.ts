@@ -24,6 +24,7 @@ import { checkUrl, type MonitorCheckConfig, type MonitorCheckResult } from '@lin
 import { createStableMessageId } from '@linkalive/notifications';
 
 import { decryptString } from './crypto.js';
+import type { NetworkGuard } from './network-guard.js';
 import { makeNotificationPayload, payloadAllowsRecovery } from './notification-payload.js';
 import {
   retiredNotificationSecretData,
@@ -356,6 +357,7 @@ function monitorUpdate(
     failureStreakStartedAt: transition.state.failureStreakStartedAt,
     failureStreakFirstErrorType: transition.state.failureStreakFirstErrorType,
     lastCheckedAt: result.finishedAt,
+    networkUnknownSince: null,
     lastStatusCode: result.statusCode,
     lastTtfbMs: result.ttfbMs,
     lastTotalMs: result.totalMs,
@@ -369,6 +371,7 @@ export class ScheduledCheckProcessor {
     private readonly config: CheckProcessorConfig,
     private readonly client: PrismaClient = prisma,
     private readonly runCheck: CheckRunner = checkUrl,
+    private readonly networkGuard?: NetworkGuard,
   ) {}
 
   async process(data: CheckJobData): Promise<{ status: 'completed' | 'duplicate' | 'canceled' }> {
@@ -412,9 +415,10 @@ export class ScheduledCheckProcessor {
     if (claim.count !== 1) return { status: 'duplicate' };
 
     let result: MonitorCheckResult;
+    let checkConfig: MonitorCheckConfig | undefined;
     try {
       const url = decryptString(scheduled.monitor.requestUrlEncrypted, this.config.encryptionKey);
-      result = await this.runCheck({
+      checkConfig = {
         url,
         method: scheduled.monitor.method,
         timeoutMs: scheduled.monitor.timeoutMs,
@@ -425,12 +429,26 @@ export class ScheduledCheckProcessor {
         maxRedirects: scheduled.monitor.maxRedirects,
         source: 'SCHEDULED',
         configVersion: scheduled.configVersion,
-      });
+      };
+      result = await this.runCheck(checkConfig);
     } catch {
       result = platformFailure(scheduled.configVersion, now);
     }
 
-    return this.persist(scheduled, result);
+    let outageId: string | null = null;
+    if (this.networkGuard && checkConfig) {
+      const retryConfig = checkConfig;
+      const firstResult = result;
+      const assessment = await this.networkGuard.assess(result, () => {
+        const remaining = leaseUntil.getTime() - Date.now();
+        return remaining > (retryConfig.timeoutMs ?? 10_000) + 10_000
+          ? this.runCheck(retryConfig)
+          : Promise.resolve(firstResult);
+      });
+      result = assessment.result;
+      outageId = assessment.outageId;
+    }
+    return this.persist(scheduled, result, outageId);
   }
 
   private async cancelStale(id: string): Promise<void> {
@@ -459,10 +477,15 @@ export class ScheduledCheckProcessor {
   private async persist(
     original: CheckWithMonitor,
     result: MonitorCheckResult,
+    outageId: string | null = null,
   ): Promise<{ status: 'completed' | 'duplicate' | 'canceled' }> {
     try {
       return await this.client.$transaction(
         async (tx) => {
+          if (outageId)
+            await tx.$queryRaw(
+              Prisma.sql`SELECT id FROM network_outages WHERE id = ${outageId} FOR UPDATE`,
+            );
           await tx.$queryRaw(
             Prisma.sql`SELECT id FROM monitors WHERE id = ${original.monitorId} FOR UPDATE`,
           );
@@ -506,6 +529,35 @@ export class ScheduledCheckProcessor {
             monitor.lifecycleStatus === MonitorLifecycle.ACTIVE &&
             monitor.deletedAt === null;
           if (valid) {
+            if (this.networkGuard && result.outcome === 'INCONCLUSIVE') {
+              await tx.monitor.update({
+                where: { id: monitor.id },
+                data: {
+                  networkUnknownSince: monitor.networkUnknownSince ?? result.startedAt,
+                },
+              });
+              if (outageId)
+                await tx.networkObservation.upsert({
+                  where: { outageId_monitorId: { outageId, monitorId: monitor.id } },
+                  update: {},
+                  create: {
+                    outageId,
+                    monitorId: monitor.id,
+                    configVersion: scheduled.configVersion,
+                  },
+                });
+            }
+            if (this.networkGuard && ['SUCCESS', 'TARGET_FAILURE'].includes(result.outcome)) {
+              await tx.networkObservation.updateMany({
+                where: {
+                  monitorId: monitor.id,
+                  recheckedAt: null,
+                  configVersion: scheduled.configVersion,
+                  outage: { recoveredAt: { lte: result.startedAt } },
+                },
+                data: { recheckedAt: result.finishedAt, outcome: result.outcome },
+              });
+            }
             const transition = applyCheckResult(
               {
                 lifecycleStatus: monitor.lifecycleStatus,

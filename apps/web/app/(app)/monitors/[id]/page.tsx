@@ -7,6 +7,7 @@ import { Icon } from '@/components/Icon';
 import { MonitorForm } from '@/components/MonitorForm';
 import { EmptyState, ErrorPanel, InlineNotice, PageLoader } from '@/components/StateViews';
 import { IncidentBadge, OutcomeBadge, StatusBadge } from '@/components/StatusBadge';
+import { NetworkWarning } from '@/components/NetworkWarning';
 import { useToast } from '@/components/ToastProvider';
 import { getErrorMessage, isUnauthorized, monitorsApi, notificationChannelsApi } from '@/lib/api';
 import {
@@ -236,6 +237,7 @@ export default function MonitorDetailPage() {
             <div className="detail-title-line">
               <h1>{monitor.name}</h1>
               <StatusBadge state={state} />
+              <NetworkWarning monitor={monitor} />
               {stale && state !== 'STALE' ? <StatusBadge state="STALE" /> : null}
             </div>
             <a

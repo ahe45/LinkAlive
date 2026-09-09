@@ -99,6 +99,7 @@ enum NotificationEventType {
   RECOVERY
   RESOLVED_SUMMARY
   TEST
+  NETWORK_RECOVERY
 
   @@map("notification_event_type")
 }
@@ -189,6 +190,7 @@ model Monitor {
   failureStreakStartedAt      DateTime?        @map("failure_streak_started_at") @db.DateTime(3)
   failureStreakFirstErrorType CheckErrorType?  @map("failure_streak_first_error_type")
   lastCheckedAt               DateTime?        @map("last_checked_at") @db.DateTime(3)
+  networkUnknownSince         DateTime?        @map("network_unknown_since") @db.DateTime(3)
   lastSuccessAt               DateTime?        @map("last_success_at") @db.DateTime(3)
   lastFailureAt               DateTime?        @map("last_failure_at") @db.DateTime(3)
   lastStatusCode              Int?             @map("last_status_code") @db.SmallInt
@@ -201,12 +203,13 @@ model Monitor {
   updatedAt                   DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
   deletedAt                   DateTime?        @map("deleted_at") @db.DateTime(3)
 
-  scheduledChecks ScheduledCheck[]
-  checkResults    CheckResult[]
-  incidents       Incident[]
-  channels        MonitorChannel[]
-  outboxEvents    NotificationOutbox[]
-  owner           Account?             @relation("MonitorOwner", fields: [ownerAccountId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  scheduledChecks     ScheduledCheck[]
+  checkResults        CheckResult[]
+  incidents           Incident[]
+  channels            MonitorChannel[]
+  outboxEvents        NotificationOutbox[]
+  networkObservations NetworkObservation[]
+  owner               Account?             @relation("MonitorOwner", fields: [ownerAccountId], references: [id], onDelete: SetNull, onUpdate: Restrict)
 
   @@index([lifecycleStatus, nextCheckAt], map: "monitors_due_idx")
   @@index([healthState], map: "monitors_health_idx")
@@ -335,7 +338,7 @@ model MonitorChannel {
 
 model NotificationOutbox {
   id                         String                   @id @default(uuid()) @db.Char(36)
-  monitorId                  String                   @map("monitor_id") @db.Char(36)
+  monitorId                  String?                  @map("monitor_id") @db.Char(36)
   incidentId                 String?                  @map("incident_id") @db.Char(36)
   channelId                  String                   @map("channel_id") @db.Char(36)
   eventType                  NotificationEventType    @map("event_type")
@@ -362,7 +365,7 @@ model NotificationOutbox {
   createdAt                  DateTime                 @default(now()) @map("created_at") @db.DateTime(3)
   updatedAt                  DateTime                 @updatedAt @map("updated_at") @db.DateTime(3)
 
-  monitor    Monitor                @relation(fields: [monitorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  monitor    Monitor?               @relation(fields: [monitorId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   incident   Incident?              @relation(fields: [incidentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   channel    NotificationChannel    @relation(fields: [channelId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   deliveries NotificationDelivery[]
@@ -371,6 +374,58 @@ model NotificationOutbox {
   @@index([status, availableAt], map: "notification_outbox_dispatch_idx")
   @@index([status, leaseUntil], map: "notification_outbox_reconcile_idx")
   @@map("notification_outbox")
+}
+
+model NetworkSettings {
+  id         Int      @id @default(1)
+  enabled    Boolean  @default(false)
+  urls       Json
+  channelIds Json     @map("channel_ids")
+  version    Int      @default(1)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+
+  @@map("network_settings")
+}
+
+model NetworkObserver {
+  id             String          @id @db.VarChar(160)
+  status         String          @default("UNKNOWN") @db.VarChar(32)
+  checkedAt      DateTime?       @map("checked_at") @db.DateTime(3)
+  probeResults   Json?           @map("probe_results")
+  activeOutageId String?         @map("active_outage_id") @db.Char(36)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
+  outages        NetworkOutage[]
+
+  @@map("network_observers")
+}
+
+model NetworkOutage {
+  id           String               @id @default(uuid()) @db.Char(36)
+  observerId   String               @map("observer_id") @db.VarChar(160)
+  startedAt    DateTime             @map("started_at") @db.DateTime(3)
+  recoveredAt  DateTime?            @map("recovered_at") @db.DateTime(3)
+  canceledAt   DateTime?            @map("canceled_at") @db.DateTime(3)
+  summarizedAt DateTime?            @map("summarized_at") @db.DateTime(3)
+  channelIds   Json                 @map("channel_ids")
+  observer     NetworkObserver      @relation(fields: [observerId], references: [id], onDelete: Restrict)
+  observations NetworkObservation[]
+
+  @@index([observerId, startedAt], map: "network_outages_observer_started_idx")
+  @@map("network_outages")
+}
+
+model NetworkObservation {
+  outageId      String        @map("outage_id") @db.Char(36)
+  monitorId     String        @map("monitor_id") @db.Char(36)
+  configVersion Int           @map("config_version")
+  recheckedAt   DateTime?     @map("rechecked_at") @db.DateTime(3)
+  outcome       String?       @db.VarChar(32)
+  outage        NetworkOutage @relation(fields: [outageId], references: [id], onDelete: Cascade)
+  monitor       Monitor       @relation(fields: [monitorId], references: [id], onDelete: Restrict)
+
+  @@id([outageId, monitorId])
+  @@index([monitorId, recheckedAt], map: "network_observations_monitor_idx")
+  @@map("network_observations")
 }
 
 model NotificationDelivery {

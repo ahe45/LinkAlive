@@ -349,6 +349,7 @@ export class NotificationProcessor {
     if (!incident || incident.status !== IncidentStatus.RESOLVED || !incident.resolvedAt) {
       return incident?.status ?? null;
     }
+    if (!down.monitorId) return incident.status;
     const channel = await tx.notificationChannel.findUnique({
       where: { id: down.channelId },
       select: { enabled: true, deletedAt: true },

@@ -235,10 +235,12 @@ describe.runIf(integrationEnabled)('MariaDB/MySQL + Redis scheduled outage flow'
       MonitorHealth.DOWN,
     );
 
-    expect(await outboxDispatcher.dispatch(new Date(), 10)).toBe(1);
     const down = await prisma.notificationOutbox.findFirstOrThrow({
       where: { monitorId, eventType: NotificationEventType.DOWN },
     });
+    // Use the persisted deadline so small DB/host clock differences do not make
+    // a just-created event appear to be scheduled in the future in this test.
+    expect(await outboxDispatcher.dispatch(down.availableAt, 10)).toBe(1);
     await expect(notificationProcessor.process({ outboxId: down.id })).resolves.toEqual({
       status: 'sent',
     });
@@ -254,10 +256,10 @@ describe.runIf(integrationEnabled)('MariaDB/MySQL + Redis scheduled outage flow'
       }),
     ).resolves.toEqual({ status: 'completed' });
 
-    expect(await outboxDispatcher.dispatch(new Date(), 10)).toBe(1);
     const recovery = await prisma.notificationOutbox.findFirstOrThrow({
       where: { monitorId, eventType: NotificationEventType.RECOVERY },
     });
+    expect(await outboxDispatcher.dispatch(recovery.availableAt, 10)).toBe(1);
     await expect(notificationProcessor.process({ outboxId: recovery.id })).resolves.toEqual({
       status: 'sent',
     });

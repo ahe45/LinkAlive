@@ -31,6 +31,7 @@ export function toMonitorView(monitor: MonitorRecord, actor: AuthenticatedUser) 
     successCount: monitor.consecutiveSuccesses,
     nextCheckAt: monitor.nextCheckAt,
     lastCheckedAt: monitor.lastCheckedAt,
+    networkUnknownSince: monitor.networkUnknownSince ?? null,
     lastStatusCode: monitor.lastStatusCode,
     lastTtfbMs: monitor.lastTtfbMs,
     lastTotalMs: monitor.lastTotalMs,

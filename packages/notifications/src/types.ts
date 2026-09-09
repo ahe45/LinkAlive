@@ -1,4 +1,5 @@
-export type NotificationEventType = 'DOWN' | 'RECOVERY' | 'RESOLVED_SUMMARY' | 'TEST';
+export type NotificationEventType =
+  'DOWN' | 'RECOVERY' | 'RESOLVED_SUMMARY' | 'TEST' | 'NETWORK_RECOVERY';
 
 export interface SafeNotificationPayload {
   eventType: NotificationEventType;
@@ -11,6 +12,7 @@ export interface SafeNotificationPayload {
   ttfbMs?: number | null;
   durationMs?: number | null;
   dashboardUrl?: string | null;
+  networkStartedAt?: string | null;
 }
 
 export interface RenderedNotification {

@@ -78,6 +78,7 @@ export function parseNotificationPayload(
     ttfbMs: nullableNumber('ttfbMs'),
     durationMs: nullableNumber('durationMs'),
     dashboardUrl: nullableString('dashboardUrl'),
+    networkStartedAt: nullableString('networkStartedAt'),
   };
 }
 

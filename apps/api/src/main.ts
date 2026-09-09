@@ -25,7 +25,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: config.webOrigins,
     credentials: true,
-    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
   app.setGlobalPrefix('api/v1', {
     exclude: [

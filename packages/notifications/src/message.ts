@@ -48,15 +48,31 @@ function safeDashboardUrl(value: unknown): string | null {
 }
 
 function eventLabel(eventType: SafeNotificationPayload['eventType']): string {
+  if (eventType === 'NETWORK_RECOVERY') return '감시 PC 외부 연결 복구';
   if (eventType === 'DOWN') return '장애 발생';
   if (eventType === 'RECOVERY') return '복구 완료';
   if (eventType === 'RESOLVED_SUMMARY') return '장애 및 복구 요약';
   return '시험 알림';
 }
 
+const notificationDateFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
 function formatDate(value: string | Date): string {
   const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? '확인 불가' : date.toISOString();
+  if (Number.isNaN(date.getTime())) return '확인 불가';
+  const parts = Object.fromEntries(
+    notificationDateFormatter.formatToParts(date).map(({ type, value }) => [type, value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second} (KST)`;
 }
 
 function formatDuration(durationMs: number | null | undefined): string | null {
@@ -85,17 +101,24 @@ export function renderNotification(payload: SafeNotificationPayload): RenderedNo
   const dashboardUrl = safeDashboardUrl(payload.dashboardUrl);
   const duration = formatDuration(payload.durationMs);
   const rows: Array<[string, string]> = [
-    ['모니터', monitorName],
+    [payload.eventType === 'NETWORK_RECOVERY' ? '감시 PC' : '모니터', monitorName],
     ['대상', displayUrl],
     ['시각', occurredAt],
   ];
+  if (payload.eventType === 'NETWORK_RECOVERY' && payload.networkStartedAt) {
+    rows.push(['연결 이상 감지', formatDate(payload.networkStartedAt)]);
+  }
   if (errorType) rows.push(['오류 유형', errorType]);
   if (errorMessage) rows.push(['설명', errorMessage]);
   if (typeof payload.statusCode === 'number') rows.push(['HTTP 상태', String(payload.statusCode)]);
   if (typeof payload.ttfbMs === 'number' && Number.isFinite(payload.ttfbMs)) {
     rows.push(['응답 시간', `${Math.max(0, Math.round(payload.ttfbMs))}ms`]);
   }
-  if (duration) rows.push(['장애 지속', duration]);
+  if (duration)
+    rows.push([
+      payload.eventType === 'NETWORK_RECOVERY' ? '연결 확인 불가 시간' : '장애 지속',
+      duration,
+    ]);
 
   const textLines = [`LinkAlive ${label}`, '', ...rows.map(([key, value]) => `${key}: ${value}`)];
   if (dashboardUrl) textLines.push('', `관리 화면: ${dashboardUrl}`);

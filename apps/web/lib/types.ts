@@ -48,6 +48,7 @@ export interface Monitor {
   successCount: number;
   nextCheckAt?: string | null;
   lastCheckedAt?: string | null;
+  networkUnknownSince?: string | null;
   lastStatusCode?: number | null;
   lastTtfbMs?: number | null;
   lastTotalMs?: number | null;
@@ -93,7 +94,8 @@ export interface CheckResult {
 
 export type IncidentStatus = 'OPEN' | 'RESOLVED' | 'CANCELED';
 
-export type NotificationEventType = 'DOWN' | 'RECOVERY' | 'RESOLVED_SUMMARY' | 'TEST';
+export type NotificationEventType =
+  'DOWN' | 'RECOVERY' | 'RESOLVED_SUMMARY' | 'TEST' | 'NETWORK_RECOVERY';
 
 export type NotificationOutboxStatus =
   'PENDING' | 'ENQUEUED' | 'PROCESSING' | 'RETRY' | 'SENT' | 'FAILED' | 'CANCELED';
